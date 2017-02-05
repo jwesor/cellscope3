@@ -1,4 +1,4 @@
-package berkeley.edu.cellscope3;
+package edu.berkeley.cellscope3;
 
 import org.junit.Test;
 

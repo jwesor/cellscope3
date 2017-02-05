@@ -1,4 +1,4 @@
-package berkeley.edu.cellscope3;
+package edu.berkeley.cellscope3;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
 		// Context of the app under test.
 		Context appContext = InstrumentationRegistry.getTargetContext();
 
-		assertEquals("berkeley.edu.cellscope3", appContext.getPackageName());
+		assertEquals("edu.berkeley.cellscope3", appContext.getPackageName());
 	}
 }
