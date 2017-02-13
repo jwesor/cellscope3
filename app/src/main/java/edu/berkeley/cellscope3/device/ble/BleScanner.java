@@ -21,7 +21,7 @@ public final class BleScanner {
 		this.handler = new Handler();
 	}
 
-	public void scan(UUID serviceUuid, long scanMillis, final BleScannerCallback callback) {
+	public void scan(final BleScannerCallback callback, long scanMillis) {
 		leScanCallback = new BluetoothAdapter.LeScanCallback() {
 			@Override
 			public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {

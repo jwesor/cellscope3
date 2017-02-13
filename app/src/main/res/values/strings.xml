@@ -2,7 +2,7 @@
     <string name="app_name">Cellscope3</string>
     <string name="fragment_scanner_title">Nearby Devices</string>
     <string name="scanner_status_scanning">Scanning...</string>
-    <string name="scanner_status_scan_failed">Scan failed</string>
+    <string name="scanner_status_service_unbound">Service not bound</string>
     <string name="scanner_status_scan_complete">Scan complete</string>
     <string name="scanner_status_connecting">Connecting...</string>
     <string name="scanner_status_connected">Connected</string>

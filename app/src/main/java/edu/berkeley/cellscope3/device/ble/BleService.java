@@ -11,6 +11,9 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 import edu.berkeley.cellscope3.device.DeviceConnection;
 
 /** A bound service that manages a single {@link BleDeviceConnection} */
@@ -18,7 +21,6 @@ public final class BleService extends Service {
 
 	public static final String ACTION_DEVICE_CONNECTED = "BLE_DEVICE_CONNECTED";
 	public static final String ACTION_DEVICE_DISCONNECTED = "BLE_DEVICE_DISCONNECTED";
-	public static final String ACTION_DEVICE_CONNECT_FAILED  = "BLE_DEVICE_CONNECT_FAILED";
 	public static final String ACTION_DEVICE_RESPONSE = "BLE_DEVICE_RESPONSE";
 	public static final String EXTRA_RESPONSE_DATA = "BLE_EXTRA_RESPONSE_DATA";
 
@@ -27,7 +29,6 @@ public final class BleService extends Service {
 	static {
 		INTENT_FILTER.addAction(ACTION_DEVICE_CONNECTED);
 		INTENT_FILTER.addAction(ACTION_DEVICE_DISCONNECTED);
-		INTENT_FILTER.addAction(ACTION_DEVICE_CONNECT_FAILED);
 		INTENT_FILTER.addAction(ACTION_DEVICE_RESPONSE);
 	}
 
@@ -44,9 +45,9 @@ public final class BleService extends Service {
 		bluetoothAdapter = bluetoothManager.getAdapter();
 	}
 
-	public boolean connect(String address, BleProfile profile) {
+	public ListenableFuture<Boolean> connect(String address, BleProfile profile) {
 		if (!BluetoothAdapter.checkBluetoothAddress(address)) {
-			return false;
+			return Futures.immediateFuture(false);
 		}
 		BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
 		deviceConnection = new BleDeviceConnection(getApplicationContext(), device, profile);
@@ -95,11 +96,6 @@ public final class BleService extends Service {
 		@Override
 		public void onDeviceDisconnect() {
 			sendBroadcast(new Intent(ACTION_DEVICE_DISCONNECTED));
-		}
-
-		@Override
-		public void onDeviceConnectFail() {
-			sendBroadcast(new Intent(ACTION_DEVICE_CONNECT_FAILED));
 		}
 
 		@Override

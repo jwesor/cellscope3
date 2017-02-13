@@ -8,6 +8,10 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,8 +29,8 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 	@Nullable private String address;
 	@Nullable private BleProfile profile;
 
-	private boolean bound;
 	private BleService service;
+	private SettableFuture<Boolean> bindFuture;
 
 	public BleServiceDeviceConnection(Context context) {
 		this(context, null, null);
@@ -44,46 +48,52 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 		this.profile = profile;
 	}
 
-	public boolean bindService() {
-		if (bound) {
-			return false;
+	public ListenableFuture<Boolean> bindService() {
+		if (service != null) {
+			return Futures.immediateFuture(true);
 		}
 		Intent intent = new Intent(context, BleService.class);
-		boolean bindInit = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-		if (bindInit) {
-			context.registerReceiver(broadcastReceiver, BleService.INTENT_FILTER);
+		if (!context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)) {
+			return Futures.immediateFuture(false);
 		}
-		return bindInit;
+		context.registerReceiver(broadcastReceiver, BleService.INTENT_FILTER);
+		bindFuture = SettableFuture.create();
+		return bindFuture;
 	}
 
-	public boolean unbindService() {
-		if (bound) {
+	public void unbindService() {
+		if (service != null) {
 			context.unbindService(serviceConnection);
 			context.unregisterReceiver(broadcastReceiver);
 			service = null;
-			bound = false;
 		}
-		return !bound;
+	}
+
+	public boolean isServiceBound() {
+		return service != null;
 	}
 
 	@Override
-	public boolean connect() {
-		return bound && address != null && profile != null && service.connect(address, profile);
+	public ListenableFuture<Boolean> connect() {
+		if (service != null && address != null && profile != null) {
+			return service.connect(address, profile);
+		}
+		return Futures.immediateFuture(false);
 	}
 
 	@Override
 	public boolean disconnect() {
-		return bound && service.disconnect();
+		return service != null && service.disconnect();
 	}
 
 	@Override
 	public ConnectionStatus getStatus() {
-		return bound ? service.getStatus() : ConnectionStatus.DISCONNECTED;
+		return service != null ? service.getStatus() : ConnectionStatus.DISCONNECTED;
 	}
 
 	@Override
 	public boolean sendRequest(byte[] data) {
-		return bound && service.sendRequest(data);
+		return service != null && service.sendRequest(data);
 	}
 
 	@Override
@@ -94,12 +104,6 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 	private void notifyOnConnect() {
 		for (DeviceListener listener: listeners) {
 			listener.onDeviceConnect();
-		}
-	}
-
-	private void notifyOnConnectFail() {
-		for (DeviceListener listener: listeners) {
-			listener.onDeviceConnectFail();
 		}
 	}
 
@@ -120,12 +124,12 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
 			BleService.BleServiceBinder serviceBinder = (BleService.BleServiceBinder) iBinder;
 			service = serviceBinder.getService();
-			bound = true;
+			bindFuture.set(true);
 		}
 
 		@Override
 		public void onServiceDisconnected(ComponentName componentName) {
-			bound = false;
+			service = null;
 		}
 	};
 
@@ -136,9 +140,6 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 			switch (action) {
 				case BleService.ACTION_DEVICE_CONNECTED:
 					notifyOnConnect();
-					break;
-				case BleService.ACTION_DEVICE_CONNECT_FAILED:
-					notifyOnConnectFail();
 					break;
 				case BleService.ACTION_DEVICE_DISCONNECTED:
 					notifyOnDiconnect();

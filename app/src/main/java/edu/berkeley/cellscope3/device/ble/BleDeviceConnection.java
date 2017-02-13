@@ -6,6 +6,11 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
+import android.util.Log;
+
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +19,8 @@ import edu.berkeley.cellscope3.device.DeviceConnection;
 
 /** Implementation of {@link DeviceConnection} that connects over Bluetooth LE */
 public final class BleDeviceConnection implements DeviceConnection {
+
+	private final String TAG = BleDeviceConnection.class.getSimpleName();
 
 	private final Context context;
 	private final BluetoothDevice device;
@@ -25,6 +32,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 	private BluetoothGatt gatt;
 	private BluetoothGattCharacteristic txChar;
 	private BluetoothGattCharacteristic rxChar;
+	private SettableFuture<Boolean> connectFuture;
 
 	public BleDeviceConnection(Context context, BluetoothDevice device, BleProfile profile) {
 		this.context = context;
@@ -36,21 +44,29 @@ public final class BleDeviceConnection implements DeviceConnection {
 	}
 
 	@Override
-	public boolean connect() {
+	public ListenableFuture<Boolean> connect() {
 		if (state != ConnectionStatus.DISCONNECTED) {
+			Log.d(TAG, "Already connecting or connected");
+			return connectFuture;
+		}
+		if (gatt != null) {
 			if (!gatt.connect()) {
-				return false;
+				Log.d(TAG, "Failed to initiate gatt connection");
+				return Futures.immediateFuture(false);
 			}
 		} else {
 			gatt = device.connectGatt(context, false /* autoConnect */, callback);
 		}
+		Log.d(TAG, "Connecting to " + device.getAddress());
 		state = ConnectionStatus.CONNECTING;
-		return true;
+		connectFuture = SettableFuture.create();
+		return connectFuture;
 	}
 
 	@Override
 	public boolean disconnect() {
-		if (state != ConnectionStatus.CONNECTED) {
+		if (state != ConnectionStatus.DISCONNECTED) {
+			Log.d(TAG, "Disconnecting");
 			gatt.disconnect();
 			gatt.close();
 			state = ConnectionStatus.DISCONNECTED;
@@ -84,9 +100,11 @@ public final class BleDeviceConnection implements DeviceConnection {
 		gatt = null;
 	}
 
-	private void notifyConnectFailed() {
-		for (DeviceListener listener: listeners) {
-			listener.onDeviceConnectFail();
+	private void connectFailed() {
+		gatt.disconnect();
+		state = ConnectionStatus.DISCONNECTED;
+		if (connectFuture != null) {
+			connectFuture.set(false);
 		}
 	}
 
@@ -97,14 +115,13 @@ public final class BleDeviceConnection implements DeviceConnection {
 				BluetoothGatt gatt, int status, int newState) {
 			super.onConnectionStateChange(gatt, status, newState);
 			if (status == BluetoothGatt.GATT_FAILURE) {
-				state = ConnectionStatus.DISCONNECTED;
-				notifyConnectFailed();
+				Log.d(TAG, "GATT failed to connect");
+				connectFailed();
 			} else if (status == BluetoothGatt.GATT_SUCCESS &&
 					newState == BluetoothGatt.STATE_CONNECTED) {
 				if (!gatt.discoverServices()) {
-					state = ConnectionStatus.DISCONNECTED;
-					gatt.disconnect();
-					notifyConnectFailed();
+					Log.d(TAG, "GATT failed to discover services");
+					connectFailed();
 				}
 			} else {
 				state = ConnectionStatus.DISCONNECTED;
@@ -119,28 +136,29 @@ public final class BleDeviceConnection implements DeviceConnection {
 			super.onServicesDiscovered(gatt, status);
 			BluetoothGattService service = gatt.getService(profile.serviceUuid);
 			if (service == null) {
-				state = ConnectionStatus.DISCONNECTED;
-				gatt.disconnect();
-				notifyConnectFailed();
+				Log.d(TAG, "Did not discover GATT service with target uuid " + profile.serviceUuid);
+				connectFailed();
 				return;
 			}
 			txChar = service.getCharacteristic(profile.txUuid);
 			rxChar = service.getCharacteristic(profile.rxUuid);
 			if (txChar == null || rxChar == null) {
-				state = ConnectionStatus.DISCONNECTED;
-				gatt.disconnect();
-				notifyConnectFailed();
+				Log.d(TAG, "Did not discover GATT service with characteristic " + profile.txUuid);
+				connectFailed();
 				return;
 			}
 			if (!gatt.setCharacteristicNotification(rxChar, true)) {
-				state = ConnectionStatus.DISCONNECTED;
-				gatt.disconnect();
-				notifyConnectFailed();
+				Log.d(TAG, "Failed to set notifications for characteristic " + profile.rxUuid);
+				connectFailed();
 				return;
 			}
+			Log.d(TAG, "Successfully connected to " + device.getAddress());
 			state = ConnectionStatus.CONNECTED;
 			for (DeviceListener listener: listeners) {
 				listener.onDeviceConnect();
+			}
+			if (connectFuture != null) {
+				connectFuture.set(true);
 			}
 		}
 	}

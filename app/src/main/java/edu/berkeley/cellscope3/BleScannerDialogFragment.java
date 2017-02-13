@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,10 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,8 +30,9 @@ import edu.berkeley.cellscope3.device.ble.BleProfile;
 import edu.berkeley.cellscope3.device.ble.BleScanner;
 import edu.berkeley.cellscope3.device.ble.BleServiceDeviceConnection;
 
-public final class ScannerDialogFragment extends DialogFragment {
+public final class BleScannerDialogFragment extends DialogFragment {
 
+	private static final String TAG = BleScannerDialogFragment.class.getSimpleName();
 	private static final int REQUEST_ENABLE_BLUETOOTH = 1;
 
 	private final List<String> devices;
@@ -41,7 +47,7 @@ public final class ScannerDialogFragment extends DialogFragment {
 	private BleProfile targetProfile;
 	private BleServiceDeviceConnection deviceConnection;
 
-	public ScannerDialogFragment() {
+	public BleScannerDialogFragment() {
 		super();
 		this.devices = new ArrayList<>();
 		this.scannerCallback = new BleScanner.BleScannerCallback() {
@@ -50,7 +56,10 @@ public final class ScannerDialogFragment extends DialogFragment {
 				getActivity().runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
-						adapter.add(device.getAddress());
+						String address = device.getAddress();
+						if (!devices.contains(address)) {
+							adapter.add(address);
+						}
 					}
 				});
 				updateState();
@@ -73,24 +82,34 @@ public final class ScannerDialogFragment extends DialogFragment {
 		adapter.setNotifyOnChange(true);
 
 		deviceConnection = new BleServiceDeviceConnection(getActivity());
-		deviceConnection.addListener(new DeviceConnection.DefaultDeviceListener() {
+
+		ListenableFuture<Boolean> bindFuture = deviceConnection.bindService();
+		Futures.addCallback(bindFuture, new FutureCallback<Boolean>() {
 			@Override
-			public void onDeviceConnect() {
+			public void onSuccess(Boolean result) {
+				if (result) {
+					Log.d(TAG, "BleService successfully bound");
+					final BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+					if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
+						Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+						startActivityForResult(enableBtIntent, REQUEST_ENABLE_BLUETOOTH);
+					} else {
+						scanner = new BleScanner(bluetoothAdapter);
+						startScan();
+					}
+				} else {
+					Log.e(TAG, "Unable to bind BleService");
+				}
 				updateState();
 			}
 
 			@Override
-			public void onDeviceConnectFail() {
-				updateState();
-			}
-
-			@Override
-			public void onDeviceDisconnect() {
-				startScan();
+			public void onFailure(Throwable t) {
+				Log.e(TAG, "Unable to bind BleService", t);
 				updateState();
 			}
 		});
-		deviceConnection.bindService();
+
 	}
 
 	@Override
@@ -114,6 +133,7 @@ public final class ScannerDialogFragment extends DialogFragment {
 						startScan();
 					}
 				}
+				updateState();
 			}
 		});
 
@@ -122,42 +142,18 @@ public final class ScannerDialogFragment extends DialogFragment {
 		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-				scanner.stopScan();
-				if (deviceConnection.getStatus() == DeviceConnection.ConnectionStatus.DISCONNECTED) {
-					deviceConnection.setConnection(adapter.getItem(i), targetProfile);
-					deviceConnection.connect();
-					updateState();
-				}
+				connectDevice(adapter.getItem(i));
 			}
 		});
 		return view;
 	}
 
 	@Override
-	public void onStart() {
-		super.onStart();
-		System.out.println(deviceConnection.getStatus());
-		final BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-		if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-			startActivityForResult(enableBtIntent, REQUEST_ENABLE_BLUETOOTH);
-		} else {
-			scanner = new BleScanner(bluetoothAdapter);
-		}
-		updateState();
-	}
-
-	@Override
-	public void onStop() {
-		super.onStop();
+	public void onDestroy() {
+		super.onDestroy();
 		if (scanner != null) {
 			scanner.stopScan();
 		}
-	}
-
-	@Override
-	public void onDestroy() {
-		super.onDestroy();
 		deviceConnection.unbindService();
 	}
 
@@ -173,31 +169,57 @@ public final class ScannerDialogFragment extends DialogFragment {
 	}
 
 	private void startScan() {
-		scanner.scan(targetProfile.serviceUuid, 0, scannerCallback);
+		scanner.scan(scannerCallback, 0 /* scanMillis */);
 	}
 
+	private void connectDevice(String address) {
+		scanner.stopScan();
+		if (deviceConnection.getStatus() == DeviceConnection.ConnectionStatus.DISCONNECTED) {
+			deviceConnection.setConnection(address, targetProfile);
+			Futures.addCallback(
+				deviceConnection.connect(),
+				new FutureCallback<Boolean>() {
+					@Override
+					public void onSuccess(Boolean result) {
+						updateState();
+					}
+
+					@Override
+					public void onFailure(Throwable t) {
+						updateState();
+					}
+				});
+			updateState();
+		}
+
+	}
 	private void updateState() {
-		final boolean spinning =
-				deviceConnection.getStatus() == DeviceConnection.ConnectionStatus.CONNECTING ||
-						scanner.isScanning();
 		getActivity().runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				spinner.setIndeterminate(spinning);
-				switch (deviceConnection.getStatus()) {
-					case CONNECTED:
-						status.setText(R.string.scanner_status_connected);
-						break;
-					case CONNECTING:
-						status.setText(R.string.scanner_status_connecting);
-						break;
-					default:
-						if (scanner.isScanning()) {
-							status.setText(R.string.scanner_status_scanning);
-						} else {
-							status.setText(R.string.scanner_status_disconnected);
-						}
-						break;
+				status.setEnabled(deviceConnection.isServiceBound());
+				if (scanner == null) {
+					status.setText(R.string.scanner_status_service_unbound);
+				} else {
+					boolean spinning = scanner.isScanning() ||
+							deviceConnection.getStatus() ==
+									DeviceConnection.ConnectionStatus.CONNECTING;
+					spinner.setIndeterminate(spinning);
+					switch (deviceConnection.getStatus()) {
+						case CONNECTED:
+							status.setText(R.string.scanner_status_connected);
+							break;
+						case CONNECTING:
+							status.setText(R.string.scanner_status_connecting);
+							break;
+						default:
+							if (scanner.isScanning()) {
+								status.setText(R.string.scanner_status_scanning);
+							} else {
+								status.setText(R.string.scanner_status_disconnected);
+							}
+							break;
+					}
 				}
 			}
 		});

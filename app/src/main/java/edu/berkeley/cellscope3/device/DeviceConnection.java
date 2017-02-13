@@ -1,9 +1,11 @@
 package edu.berkeley.cellscope3.device;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
 /** Interface for interacting with an external CellScope device. */
 public interface DeviceConnection {
 
-	boolean connect();
+	ListenableFuture<Boolean> connect();
 
 	boolean disconnect();
 
@@ -23,8 +25,6 @@ public interface DeviceConnection {
 
 		void onDeviceDisconnect();
 
-		void onDeviceConnectFail();
-
 		void onDeviceResponse(byte[] data);
 	}
 
@@ -34,9 +34,6 @@ public interface DeviceConnection {
 
 		@Override
 		public void onDeviceDisconnect() {}
-
-		@Override
-		public void onDeviceConnectFail() {}
 
 		@Override
 		public void onDeviceResponse(byte[] data) {}
