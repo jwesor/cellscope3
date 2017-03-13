@@ -3,45 +3,25 @@ package edu.berkeley.cellscope3.action;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 
-/**
- * Basic implementation of {@link Action}
- */
-public abstract class AbstractAction<T> implements Action {
+public abstract class AbstractAction<T> implements Action<T> {
 
-	private SettableFuture<T> future;
+	private ListenableFuture<T> currentFuture;
 
-	public final ListenableFuture<T> execute() {
-		if (future != null && !future.isDone()) {
+	@Override
+	public ListenableFuture<T> execute() {
+		if (currentFuture != null && !currentFuture.isDone()) {
 			throw new IllegalStateException("Action is already executing");
 		}
-		future = SettableFuture.create();
-		Futures.addCallback(future, futureCallback);
-		return future;
+		currentFuture = performExecution();
+		Futures.addCallback(currentFuture, futureCallback);
+		return currentFuture;
 	}
 
 	/**
-	 * Complete execution of this action with a successful result;
-	 *
-	 * @param result Final return value of this action
+	 * Carry out the main operation of this action
 	 */
-	protected final void finish(T result) {
-		future.set(result);
-	}
-
-	/**
-	 * End execution of this action with an exception.
-	 */
-	protected final void fail(Throwable throwable) {
-		future.setException(throwable);
-	}
-
-	/**
-	 * Initiate execution of this Action. Either {@link #finish} or {@link #fail} needs to be
-	 * called at some point to complete execution.
-	 */
-	protected abstract void performExecution();
+	protected abstract ListenableFuture<T> performExecution();
 
 	/**
 	 * Reset this action to its initial state for another execution.

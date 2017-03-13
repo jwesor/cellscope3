@@ -28,7 +28,7 @@ public interface DeviceConnection {
 		void onDeviceResponse(byte[] data);
 	}
 
-	abstract class DefaultDeviceListener implements DeviceListener {
+	abstract class AbstractDeviceListener implements DeviceListener {
 		@Override
 		public void onDeviceConnect() {}
 

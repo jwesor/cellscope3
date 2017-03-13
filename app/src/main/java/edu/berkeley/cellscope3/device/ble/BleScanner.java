@@ -10,6 +10,8 @@ import java.util.UUID;
 /** Scans for nearby Bluetooth LE devices */
 public final class BleScanner {
 
+	private static final String TAG = BleScanner.class.getSimpleName();
+
 	private final BluetoothAdapter bluetoothAdapter;
 	private final Handler handler;
 	private BluetoothAdapter.LeScanCallback leScanCallback;
@@ -25,7 +27,7 @@ public final class BleScanner {
 		leScanCallback = new BluetoothAdapter.LeScanCallback() {
 			@Override
 			public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
-				Log.d("scanner", bluetoothDevice.getAddress());
+				Log.d(TAG, bluetoothDevice.getAddress() + " " + bluetoothDevice.getName());
 				callback.onDeviceFound(bluetoothDevice);
 			}
 		};

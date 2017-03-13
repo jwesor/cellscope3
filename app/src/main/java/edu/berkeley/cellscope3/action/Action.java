@@ -10,5 +10,4 @@ import com.google.common.util.concurrent.ListenableFuture;
 public interface Action<T> {
 
 	ListenableFuture<T> execute();
-
 }

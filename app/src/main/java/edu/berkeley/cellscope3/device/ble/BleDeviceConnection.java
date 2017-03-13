@@ -119,6 +119,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 				connectFailed();
 			} else if (status == BluetoothGatt.GATT_SUCCESS &&
 					newState == BluetoothGatt.STATE_CONNECTED) {
+				Log.d(TAG, "Attempting to discover services");
 				if (!gatt.discoverServices()) {
 					Log.d(TAG, "GATT failed to discover services");
 					connectFailed();

@@ -9,7 +9,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 @RunWith(JUnit4.class)
-public class ActionQueueTest {
+public final class ActionQueueTest {
 
 	private ActionQueue actionQueue;
 
