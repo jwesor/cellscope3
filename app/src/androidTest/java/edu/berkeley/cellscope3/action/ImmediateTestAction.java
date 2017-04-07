@@ -3,13 +3,15 @@ package edu.berkeley.cellscope3.action;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
-final class ImmediateTestAction implements Action<Void> {
+final class ImmediateTestAction implements Action<Object> {
 
 	boolean executed;
+	Object result;
 
 	@Override
-	public ListenableFuture<Void> execute() {
+	public ListenableFuture<Object> execute() {
 		executed = true;
-		return Futures.immediateFuture((Void) null);
+		result = new Object();
+		return Futures.immediateFuture(result);
 	}
 }
