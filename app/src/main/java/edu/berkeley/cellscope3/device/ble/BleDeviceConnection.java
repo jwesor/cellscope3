@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.util.Log;
@@ -81,7 +82,15 @@ public final class BleDeviceConnection implements DeviceConnection {
 
 	@Override
 	public boolean sendRequest(byte[] data) {
-		return txChar == null || !txChar.setValue(data) || !gatt.writeCharacteristic(txChar);
+		Log.d(TAG, "Sending request with " + data.length + " bytes of data");
+		if (state != ConnectionStatus.CONNECTED) {
+			throw new IllegalStateException("Cannot send request to disconnected device");
+		}
+		boolean result = txChar.setValue(data) && gatt.writeCharacteristic(txChar);
+		if (!result) {
+			Log.w(TAG, "Failed to write transmission characteristic");
+		}
+		return result;
 	}
 
 	@Override
@@ -119,7 +128,10 @@ public final class BleDeviceConnection implements DeviceConnection {
 				connectFailed();
 			} else if (status == BluetoothGatt.GATT_SUCCESS &&
 					newState == BluetoothGatt.STATE_CONNECTED) {
-				Log.d(TAG, "Attempting to discover services");
+				Log.d(TAG, "GATT connected. Attempting to discover services...");
+				if (!gatt.readRemoteRssi()) {
+					Log.d(TAG, "GATT failed to read remote RSSI");
+				}
 				if (!gatt.discoverServices()) {
 					Log.d(TAG, "GATT failed to discover services");
 					connectFailed();
@@ -136,11 +148,20 @@ public final class BleDeviceConnection implements DeviceConnection {
 		public void onServicesDiscovered(BluetoothGatt gatt, int status) {
 			super.onServicesDiscovered(gatt, status);
 			BluetoothGattService service = gatt.getService(profile.serviceUuid);
+			Log.d(TAG, "Services discovered");
 			if (service == null) {
 				Log.d(TAG, "Did not discover GATT service with target uuid " + profile.serviceUuid);
 				connectFailed();
 				return;
 			}
+
+			List<BluetoothGattCharacteristic> characteristic = service
+					.getCharacteristics();
+			for (BluetoothGattCharacteristic ch: characteristic) {
+				Log.d(TAG, "Char: " + ch.getUuid().toString());
+			}
+
+			Log.d(TAG, "Finding service characteristics...");
 			txChar = service.getCharacteristic(profile.txUuid);
 			rxChar = service.getCharacteristic(profile.rxUuid);
 			if (txChar == null || rxChar == null) {
@@ -148,7 +169,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 				connectFailed();
 				return;
 			}
-			if (!gatt.setCharacteristicNotification(rxChar, true)) {
+			if (!enableNotification()) {
 				Log.d(TAG, "Failed to set notifications for characteristic " + profile.rxUuid);
 				connectFailed();
 				return;
@@ -162,5 +183,34 @@ public final class BleDeviceConnection implements DeviceConnection {
 				connectFuture.set(true);
 			}
 		}
+
+		@Override
+		public void onCharacteristicChanged(
+				BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+			Log.d(TAG, "Characteristic changed");
+			byte[] response = characteristic.getValue();
+			for (DeviceListener listener: listeners) {
+				listener.onDeviceResponse(response);
+			}
+		}
+	}
+
+	private boolean enableNotification() {
+		Log.d(TAG, "Enabling RX characteristic notification...");
+		boolean notification = gatt.setCharacteristicNotification(rxChar, true);
+		Log.d(TAG, "Getting characteristic descriptor...target is " + profile.clientConfig);
+		List<BluetoothGattDescriptor> descriptors = rxChar.getDescriptors();
+		for (BluetoothGattDescriptor desc: descriptors) {
+			Log.d(TAG, desc.getUuid().toString());
+		}
+		BluetoothGattDescriptor descriptor = rxChar.getDescriptor(profile.clientConfig);
+		if (descriptor == null) {
+			Log.e(TAG, "No descriptor with  id " + profile.clientConfig + " found!");
+			return false;
+		}
+		boolean descriptorValue =
+				descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+		boolean descriptorWrite = gatt.writeDescriptor(descriptor);
+		return notification && descriptorValue && descriptorWrite;
 	}
 }

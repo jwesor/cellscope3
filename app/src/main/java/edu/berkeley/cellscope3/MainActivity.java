@@ -1,15 +1,28 @@
 package edu.berkeley.cellscope3;
 
 import android.app.Activity;
+import android.app.IntentService;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.util.Log;
 import android.view.View;
 
+import edu.berkeley.cellscope3.action.ActionQueue;
+import edu.berkeley.cellscope3.device.DeviceData;
+import edu.berkeley.cellscope3.device.DeviceRequestAction;
+import edu.berkeley.cellscope3.device.DeviceRequestQueue;
 import edu.berkeley.cellscope3.device.ble.BleProfile;
 import edu.berkeley.cellscope3.device.ble.BleServiceDeviceConnection;
 
 public final class MainActivity extends Activity {
 
 	private BleServiceDeviceConnection deviceConnection;
+	private ActionQueue actionQueue;
+	private DeviceRequestQueue requestQueue;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -25,6 +38,19 @@ public final class MainActivity extends Activity {
 		});
 		deviceConnection = new BleServiceDeviceConnection(this);
 		deviceConnection.bindService();
+
+		actionQueue = new ActionQueue();
+		requestQueue = new DeviceRequestQueue(deviceConnection);
+		actionQueue.start();
+
+		findViewById(R.id.test_button).setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				requestQueue.queueRequest(DeviceData.of(new byte[]{1, 2, 3}));
+				requestQueue.queueRequest(DeviceData.of(new byte[]{1, 2, 3}));
+				requestQueue.queueRequest(DeviceData.of(new byte[]{1, 2, 3}));
+			}
+		});
 	}
 
 	@Override

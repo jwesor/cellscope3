@@ -24,6 +24,7 @@ public final class BleScanner {
 	}
 
 	public void scan(final BleScannerCallback callback, long scanMillis) {
+		Log.d(TAG, "Scanning started");
 		leScanCallback = new BluetoothAdapter.LeScanCallback() {
 			@Override
 			public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
@@ -50,6 +51,7 @@ public final class BleScanner {
 
 	public void stopScan() {
 		if (scanning) {
+			Log.d(TAG, "Scanning stopped");
 			scanning = false;
 			bluetoothAdapter.stopLeScan(leScanCallback);
 			scannerCallback.onScanStopped();

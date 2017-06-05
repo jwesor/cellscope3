@@ -1,5 +1,7 @@
 package edu.berkeley.cellscope3.device;
 
+import android.util.Log;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
