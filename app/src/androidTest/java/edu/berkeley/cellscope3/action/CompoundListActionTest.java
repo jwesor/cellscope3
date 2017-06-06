@@ -1,5 +1,7 @@
 package edu.berkeley.cellscope3.action;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import org.junit.Test;
@@ -11,17 +13,16 @@ import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 
 @RunWith(JUnit4.class)
-public final class MetaListActionTest {
-
-	private MetaListAction<Object> metaListAction;
+public final class CompoundListActionTest {
 
 	@Test
 	public void testSingleAction() throws Exception {
 		SettableTestAction testAction = new SettableTestAction();
 
-		metaListAction = MetaListAction.startWith().finishWith(testAction);
+		CompoundListAction<Object> listAction =
+				new CompoundListAction<>(ImmutableList.of(testAction));
 
-		ListenableFuture<Object> future = metaListAction.execute();
+		ListenableFuture<Object> future = listAction.execute();
 		assertFalse(future.isDone());
 		assertTrue(testAction.executed);
 
@@ -36,10 +37,10 @@ public final class MetaListActionTest {
 		SettableTestAction testAction2 = new SettableTestAction();
 		SettableTestAction testAction3 = new SettableTestAction();
 
-		metaListAction =
-				MetaListAction.startWith(testAction1).then(testAction2).finishWith(testAction3);
+		CompoundListAction<Object> listAction =
+				new CompoundListAction<>(ImmutableList.of(testAction1, testAction2, testAction3));
 
-		ListenableFuture<Object> future = metaListAction.execute();
+		ListenableFuture<Object> future = listAction.execute();
 		assertFalse(future.isDone());
 		assertTrue(testAction1.executed);
 
@@ -61,10 +62,10 @@ public final class MetaListActionTest {
 		SettableTestAction testAction1 = new SettableTestAction();
 		SettableTestAction testAction2 = new SettableTestAction();
 
-		metaListAction =
-				MetaListAction.startWith(testAction1).then(testAction2).finishWith(testAction2);
+		CompoundListAction<Object> listAction =
+				new CompoundListAction<>(ImmutableList.of(testAction1, testAction2));
 
-		ListenableFuture<Object> future1 = metaListAction.execute();
+		ListenableFuture<Object> future1 = listAction.execute();
 		assertFalse(future1.isDone());
 		testAction1.finish();
 		testAction2.finish();
@@ -74,7 +75,7 @@ public final class MetaListActionTest {
 		testAction1.reset();
 		testAction2.reset();
 
-		ListenableFuture<Object> future2 = metaListAction.execute();
+		ListenableFuture<Object> future2 = listAction.execute();
 		assertFalse(future2.isDone());
 		testAction1.finish();
 		testAction2.finish();
