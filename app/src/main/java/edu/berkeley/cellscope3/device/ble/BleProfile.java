@@ -24,7 +24,8 @@ public final class BleProfile {
 	public final UUID rxUuid;
 
 	public BleProfile(String serviceUuid, String clientConfig, String txUuid, String rxUuid) {
-		this(UUID.fromString(serviceUuid), UUID.fromString(clientConfig), UUID.fromString(txUuid), UUID.fromString(rxUuid));
+		this(UUID.fromString(serviceUuid), UUID.fromString(clientConfig), UUID.fromString(txUuid),
+				UUID.fromString(rxUuid));
 	}
 
 	public BleProfile(UUID serviceUuid, UUID clientConfig, UUID txUuid, UUID rxUuid) {

@@ -5,9 +5,9 @@ import android.bluetooth.BluetoothDevice;
 import android.os.Handler;
 import android.util.Log;
 
-import java.util.UUID;
-
-/** Scans for nearby Bluetooth LE devices */
+/**
+ * Scans for nearby Bluetooth LE devices
+ */
 public final class BleScanner {
 
 	private static final String TAG = BleScanner.class.getSimpleName();

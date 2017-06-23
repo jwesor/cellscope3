@@ -26,8 +26,10 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 
 	private final Context context;
 	private final List<DeviceListener> listeners;
-	@Nullable private String address;
-	@Nullable private BleProfile profile;
+	@Nullable
+	private String address;
+	@Nullable
+	private BleProfile profile;
 
 	private BleService service;
 	private SettableFuture<Boolean> bindFuture;
@@ -102,19 +104,19 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 	}
 
 	private void notifyOnConnect() {
-		for (DeviceListener listener: listeners) {
+		for (DeviceListener listener : listeners) {
 			listener.onDeviceConnect();
 		}
 	}
 
 	private void notifyOnDiconnect() {
-		for (DeviceListener listener: listeners) {
+		for (DeviceListener listener : listeners) {
 			listener.onDeviceDisconnect();
 		}
 	}
 
 	private void notifyOnResponse(byte[] data) {
-		for (DeviceListener listener: listeners) {
+		for (DeviceListener listener : listeners) {
 			listener.onDeviceResponse(data);
 		}
 	}

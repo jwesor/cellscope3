@@ -3,7 +3,6 @@ package edu.berkeley.cellscope3.device;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import edu.berkeley.cellscope3.action.AbstractAction;
-import edu.berkeley.cellscope3.action.Action;
 
 public class DeviceRequestAction extends AbstractAction<DeviceData> {
 
@@ -21,5 +20,6 @@ public class DeviceRequestAction extends AbstractAction<DeviceData> {
 	}
 
 	@Override
-	protected void reset() {}
+	protected void reset() {
+	}
 }

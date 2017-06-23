@@ -1,19 +1,11 @@
 package edu.berkeley.cellscope3;
 
 import android.app.Activity;
-import android.app.IntentService;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.IBinder;
-import android.util.Log;
 import android.view.View;
 
 import edu.berkeley.cellscope3.action.ActionQueue;
 import edu.berkeley.cellscope3.device.DeviceData;
-import edu.berkeley.cellscope3.device.DeviceRequestAction;
 import edu.berkeley.cellscope3.device.DeviceRequestQueue;
 import edu.berkeley.cellscope3.device.ble.BleProfile;
 import edu.berkeley.cellscope3.device.ble.BleServiceDeviceConnection;

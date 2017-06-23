@@ -177,22 +177,23 @@ public final class BleScannerDialogFragment extends DialogFragment {
 		if (deviceConnection.getStatus() == DeviceConnection.ConnectionStatus.DISCONNECTED) {
 			deviceConnection.setConnection(address, targetProfile);
 			Futures.addCallback(
-				deviceConnection.connect(),
-				new FutureCallback<Boolean>() {
-					@Override
-					public void onSuccess(Boolean result) {
-						updateState();
-					}
+					deviceConnection.connect(),
+					new FutureCallback<Boolean>() {
+						@Override
+						public void onSuccess(Boolean result) {
+							updateState();
+						}
 
-					@Override
-					public void onFailure(Throwable t) {
-						updateState();
-					}
-				});
+						@Override
+						public void onFailure(Throwable t) {
+							updateState();
+						}
+					});
 			updateState();
 		}
 
 	}
+
 	private void updateState() {
 		getActivity().runOnUiThread(new Runnable() {
 			@Override

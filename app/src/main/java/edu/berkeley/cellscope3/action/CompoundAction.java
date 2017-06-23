@@ -48,7 +48,8 @@ public class CompoundAction<T> extends AbstractAction<T> {
 		resultFuture.set(result);
 	}
 
-	protected void onActionComplete(Action<T> action, T result) {}
+	protected void onActionComplete(Action<T> action, T result) {
+	}
 
 	private final FutureCallback<T> futureCallback = new FutureCallback<T>() {
 		@Override

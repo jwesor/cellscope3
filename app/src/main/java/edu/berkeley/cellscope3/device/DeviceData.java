@@ -2,7 +2,9 @@ package edu.berkeley.cellscope3.device;
 
 import java.util.Arrays;
 
-/** Holds request/response data for a {@link DeviceRequestQueue} */
+/**
+ * Holds request/response data for a {@link DeviceRequestQueue}
+ */
 public final class DeviceData {
 
 	public final byte[] data;

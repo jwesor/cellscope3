@@ -18,7 +18,9 @@ import java.util.List;
 
 import edu.berkeley.cellscope3.device.DeviceConnection;
 
-/** Implementation of {@link DeviceConnection} that connects over Bluetooth LE */
+/**
+ * Implementation of {@link DeviceConnection} that connects over Bluetooth LE
+ */
 public final class BleDeviceConnection implements DeviceConnection {
 
 	private final String TAG = BleDeviceConnection.class.getSimpleName();
@@ -72,7 +74,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 			gatt.close();
 			state = ConnectionStatus.DISCONNECTED;
 			cleanup();
-			for (DeviceListener listener: listeners) {
+			for (DeviceListener listener : listeners) {
 				listener.onDeviceDisconnect();
 			}
 			return true;
@@ -138,7 +140,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 				}
 			} else {
 				state = ConnectionStatus.DISCONNECTED;
-				for (DeviceListener listener: listeners) {
+				for (DeviceListener listener : listeners) {
 					listener.onDeviceDisconnect();
 				}
 			}
@@ -150,14 +152,15 @@ public final class BleDeviceConnection implements DeviceConnection {
 			BluetoothGattService service = gatt.getService(profile.serviceUuid);
 			Log.d(TAG, "Services discovered");
 			if (service == null) {
-				Log.d(TAG, "Did not discover GATT service with target uuid " + profile.serviceUuid);
+				Log.d(TAG, "Did not discover GATT service with target uuid " + profile
+						.serviceUuid);
 				connectFailed();
 				return;
 			}
 
 			List<BluetoothGattCharacteristic> characteristic = service
 					.getCharacteristics();
-			for (BluetoothGattCharacteristic ch: characteristic) {
+			for (BluetoothGattCharacteristic ch : characteristic) {
 				Log.d(TAG, "Char: " + ch.getUuid().toString());
 			}
 
@@ -176,7 +179,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 			}
 			Log.d(TAG, "Successfully connected to " + device.getAddress());
 			state = ConnectionStatus.CONNECTED;
-			for (DeviceListener listener: listeners) {
+			for (DeviceListener listener : listeners) {
 				listener.onDeviceConnect();
 			}
 			if (connectFuture != null) {
@@ -189,7 +192,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 				BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
 			Log.d(TAG, "Characteristic changed");
 			byte[] response = characteristic.getValue();
-			for (DeviceListener listener: listeners) {
+			for (DeviceListener listener : listeners) {
 				listener.onDeviceResponse(response);
 			}
 		}
@@ -200,7 +203,7 @@ public final class BleDeviceConnection implements DeviceConnection {
 		boolean notification = gatt.setCharacteristicNotification(rxChar, true);
 		Log.d(TAG, "Getting characteristic descriptor...target is " + profile.clientConfig);
 		List<BluetoothGattDescriptor> descriptors = rxChar.getDescriptors();
-		for (BluetoothGattDescriptor desc: descriptors) {
+		for (BluetoothGattDescriptor desc : descriptors) {
 			Log.d(TAG, desc.getUuid().toString());
 		}
 		BluetoothGattDescriptor descriptor = rxChar.getDescriptor(profile.clientConfig);

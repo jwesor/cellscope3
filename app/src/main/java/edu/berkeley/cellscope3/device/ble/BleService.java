@@ -16,7 +16,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import edu.berkeley.cellscope3.device.DeviceConnection;
 
-/** A bound service that manages a single {@link BleDeviceConnection} */
+/**
+ * A bound service that manages a single {@link BleDeviceConnection}
+ */
 public final class BleService extends Service {
 
 	public static final String ACTION_DEVICE_CONNECTED = "BLE_DEVICE_CONNECTED";
@@ -87,7 +89,8 @@ public final class BleService extends Service {
 		}
 	}
 
-	private DeviceConnection.DeviceListener deviceListener = new DeviceConnection.DeviceListener() {
+	private DeviceConnection.DeviceListener deviceListener = new DeviceConnection.DeviceListener
+			() {
 		@Override
 		public void onDeviceConnect() {
 			sendBroadcast(new Intent(ACTION_DEVICE_CONNECTED));

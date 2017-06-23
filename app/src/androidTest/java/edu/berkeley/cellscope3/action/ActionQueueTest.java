@@ -1,13 +1,9 @@
 package edu.berkeley.cellscope3.action;
 
-import android.support.test.espresso.core.deps.guava.util.concurrent.MoreExecutors;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
-import java.util.concurrent.ExecutorService;
 
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;

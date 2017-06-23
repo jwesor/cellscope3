@@ -41,7 +41,8 @@ public final class ActionQueue {
 
 	/**
 	 * Starts executing {@link Action}s that have been added. If all previously added Actions
-	 * are finished, then the queue will wait until another Action is added and immediately execute.
+	 * are finished, then the queue will wait until another Action is added and immediately
+	 * execute.
 	 */
 	public void start() {
 		if (running) {

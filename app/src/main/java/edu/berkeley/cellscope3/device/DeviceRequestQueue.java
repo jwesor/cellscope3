@@ -1,7 +1,5 @@
 package edu.berkeley.cellscope3.device;
 
-import android.util.Log;
-
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -11,7 +9,7 @@ import java.util.Queue;
 /**
  * Queue for making requests to a {@link DeviceConnection} and waiting for a response. Only one
  * queue should be used per {@link DeviceConnection} at a time.
- * */
+ */
 public final class DeviceRequestQueue {
 
 	private final DeviceConnection deviceConnection;

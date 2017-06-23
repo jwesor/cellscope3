@@ -1,7 +1,6 @@
 package edu.berkeley.cellscope3.action;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import org.junit.Test;
