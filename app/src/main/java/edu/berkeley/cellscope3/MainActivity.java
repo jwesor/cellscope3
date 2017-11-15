@@ -1,10 +1,14 @@
 package edu.berkeley.cellscope3;
 
 import android.app.Activity;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import edu.berkeley.cellscope3.action.ActionQueue;
+import edu.berkeley.cellscope3.feed.camera2.Camera2Fragment;
 import edu.berkeley.cellscope3.device.DeviceData;
 import edu.berkeley.cellscope3.device.DeviceRequestQueue;
 import edu.berkeley.cellscope3.device.ble.BleProfile;
@@ -41,6 +45,13 @@ public final class MainActivity extends Activity {
 				requestQueue.queueRequest(DeviceData.of(new byte[]{1, 2, 3}));
 				requestQueue.queueRequest(DeviceData.of(new byte[]{1, 2, 3}));
 				requestQueue.queueRequest(DeviceData.of(new byte[]{1, 2, 3}));
+			}
+		});
+
+		findViewById(R.id.camera_button).setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				Log.d("TEST", "Click camera");
 			}
 		});
 	}
