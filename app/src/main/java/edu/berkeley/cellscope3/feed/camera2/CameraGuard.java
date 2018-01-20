@@ -15,6 +15,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/** Responsible for obtaining locks, opening, and closing the camera. */
 public class CameraGuard {
 
 	private static final String TAG = CameraGuard.class.getSimpleName();

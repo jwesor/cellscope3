@@ -86,9 +86,5 @@ public final class CameraSizes {
 		return withGreatestArea(sizes);
 	}
 
-	public static Size[] get(CameraCharacteristics characteristics,) {
-
-	}
-
 	private CameraSizes() {}
 }

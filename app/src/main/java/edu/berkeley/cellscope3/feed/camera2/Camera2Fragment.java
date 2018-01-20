@@ -38,23 +38,6 @@ public class Camera2Fragment extends Fragment {
 	private static final String TAG = Camera2Fragment.class.getSimpleName();
 	private static final int REQUEST_CAMERA_PERMISSION = 1;
 
-	private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
-		@Override
-		public void onOpened(@NonNull CameraDevice cameraDevice) {
-
-		}
-
-		@Override
-		public void onDisconnected(@NonNull CameraDevice cameraDevice) {
-
-		}
-
-		@Override
-		public void onError(@NonNull CameraDevice cameraDevice, int status) {
-
-		}
-	};
-
 	private final ImageAvailableListener imageAvailableListener = new ImageAvailableListener();
 	private final CameraGuard cameraGuard = new CameraGuard();
 
@@ -165,7 +148,7 @@ public class Camera2Fragment extends Fragment {
 
 			Surface surface = new Surface(texture);
 
-			// We set up a CaptureRequest.Builder with the output Su    rface.
+			// We set up a CaptureRequest.Builder with the output Surface.
 			captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 			captureRequestBuilder.addTarget(surface);
 
