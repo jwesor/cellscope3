@@ -23,6 +23,9 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <activity android:name=".feed.camera2.Camera2Activity" android:screenOrientation="portrait"/>
+
         <activity android:name=".feed.camera2.CameraPermissionRequesterActivity"
                   android:theme="@android:style/Theme.NoDisplay" />
         <service

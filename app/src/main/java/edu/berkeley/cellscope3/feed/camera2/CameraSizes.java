@@ -7,22 +7,49 @@ import android.content.Context;
 import android.graphics.Point;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.util.Log;
 import android.util.Size;
 import android.view.WindowManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class CameraSizes {
 
-	public static Size[] withAspectRatio(Size[] sizes, int width, int height) {
+	public static Size[] withClosestAspectRatio(Size[] sizes, int width, int height) {
 		List<Size> outputSizes = new ArrayList<>();
+		float targetRatio = ratio(width, height);
+		float bestDiff = Float.MAX_VALUE;
 		for (Size size: sizes) {
-			if (size.getHeight() == size.getWidth() * height / width) {
+			float currentRatio = ratio(size.getWidth(), size.getHeight());
+			float diff = Math.abs(targetRatio - currentRatio);
+			if (diff < bestDiff) {
+				bestDiff = diff;
+				outputSizes.clear();
+			}
+			if (diff == bestDiff) {
 				outputSizes.add(size);
 			}
 		}
-		return outputSizes.toArray(sizes);
+		return outputSizes.toArray(new Size[outputSizes.size()]);
+	}
+
+	public static Size[] withWiderAspectRatio(Size[] sizes, int width, int height) {
+		List<Size> outputSizes = new ArrayList<>();
+		float targetRatio = ratio(width, height);
+		for (Size size: sizes) {
+			if (ratio(size.getWidth(), size.getHeight()) <= targetRatio) {
+				outputSizes.add(size);
+			}
+		}
+		return outputSizes.toArray(new Size[outputSizes.size()]);
+	}
+
+	private static float ratio(int width, int height) {
+		// Normalize ratio so that it's always > 1
+		float ratio = (float) width/ height;
+		return ratio > 1 ? ratio : 1f / ratio;
 	}
 
 	public static Size[] largerThan(Size[] sizes, int width, int height) {
@@ -32,7 +59,7 @@ public final class CameraSizes {
 				outputSizes.add(size);
 			}
 		}
-		return outputSizes.toArray(sizes);
+		return outputSizes.toArray(new Size[outputSizes.size()]);
 	}
 
 	public static Size[] smallerThan(Size[] sizes, int width, int height) {
@@ -42,7 +69,7 @@ public final class CameraSizes {
 				outputSizes.add(size);
 			}
 		}
-		return outputSizes.toArray(sizes);
+		return outputSizes.toArray(new Size[outputSizes.size()]);
 	}
 
 	public static Size withGreatestArea(Size[] sizes) {
@@ -80,9 +107,15 @@ public final class CameraSizes {
 		activity.getWindowManager().getDefaultDisplay().getSize(windowSize);
 		int width = windowSize.x;
 		int height = windowSize.y;
-		sizes = withAspectRatio(sizes, width, height);
+		Log.d("TEST", Arrays.toString(sizes));
+		Log.d("TEST", "Expected aspect ratio " + width + " " + height);
+		sizes = withWiderAspectRatio(sizes, width, height);
+		sizes = withClosestAspectRatio(sizes, width, height);
+		Log.d("TEST", Arrays.toString(sizes));
 		sizes = smallerThan(sizes, width, height);
+		Log.d("TEST", Arrays.toString(sizes));
 		sizes = validPreviewSize(sizes);
+		Log.d("TEST", Arrays.toString(sizes));
 		return withGreatestArea(sizes);
 	}
 
