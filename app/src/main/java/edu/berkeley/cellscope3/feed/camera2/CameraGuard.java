@@ -15,7 +15,9 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/** Responsible for obtaining locks, opening, and closing the camera. */
+/**
+ * Responsible for obtaining locks, opening, and closing the camera.
+ */
 public class CameraGuard {
 
 	private static final String TAG = CameraGuard.class.getSimpleName();
@@ -40,7 +42,8 @@ public class CameraGuard {
 		try {
 			if (!semaphore.tryAcquire(TIMEOUT, TimeUnit.MILLISECONDS)) {
 				Log.e(TAG, "Timed out while acquiring camera lock");
-				return Futures.immediateFailedFuture(new TimeoutException("Timed out acquiring camera lock"));
+				return Futures.immediateFailedFuture(new TimeoutException("Timed out acquiring " +
+						"camera lock"));
 			}
 		} catch (InterruptedException e) {
 			Log.e(TAG, "Exception while acquiring camera lock", e);
@@ -48,6 +51,7 @@ public class CameraGuard {
 		}
 		if (cameraDevice != null) {
 			Log.w(TAG, "Attempted to open camera that is already open");
+			semaphore.release();
 			return Futures.immediateFuture(cameraDevice);
 		}
 
@@ -55,6 +59,7 @@ public class CameraGuard {
 		CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
 			@Override
 			public void onOpened(@NonNull CameraDevice cameraDevice) {
+				Log.d(TAG, "Camera opened");
 				CameraGuard.this.cameraDevice = cameraDevice;
 				semaphore.release();
 				openFuture.set(cameraDevice);
@@ -62,6 +67,7 @@ public class CameraGuard {
 
 			@Override
 			public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+				Log.w(TAG, "Camera disconnected");
 				CameraGuard.this.cameraDevice = null;
 				semaphore.release();
 				cameraDevice.close();
@@ -69,6 +75,7 @@ public class CameraGuard {
 
 			@Override
 			public void onError(@NonNull CameraDevice cameraDevice, int error) {
+				Log.w(TAG, "Encountered error while opening camera: " + error);
 				CameraGuard.this.cameraDevice = null;
 				semaphore.release();
 				cameraDevice.close();
@@ -76,6 +83,7 @@ public class CameraGuard {
 			}
 		};
 		try {
+			Log.d(TAG,"Opening camera...");
 			cameraManager.openCamera(cameraId, stateCallback, handler);
 		} catch (CameraAccessException | SecurityException e) {
 			Log.e(TAG, "Exception while opening camera", e);
@@ -89,6 +97,7 @@ public class CameraGuard {
 		try {
 			semaphore.acquire();
 			if (cameraDevice != null) {
+				Log.d(TAG, "Closing camera...");
 				cameraDevice.close();
 				cameraDevice = null;
 			}
@@ -100,13 +109,15 @@ public class CameraGuard {
 	}
 
 	public boolean isCameraOpen() {
-		return cameraDevice == null;
+		return cameraDevice != null;
 	}
 
 	public CameraDevice getCameraDevice() {
 		if (semaphore.tryAcquire()) {
+			semaphore.release();
 			return cameraDevice;
 		}
+		Log.w(TAG, "Camera is currently locked");
 		return null;
 	}
 

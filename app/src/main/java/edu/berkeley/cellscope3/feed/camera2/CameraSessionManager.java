@@ -21,7 +21,6 @@ import java.util.Set;
 /**
  * Created by Jon on 1/28/2018.
  */
-
 public class CameraSessionManager {
 
 	private static final String TAG = CameraSessionManager.class.getSimpleName();
@@ -46,17 +45,23 @@ public class CameraSessionManager {
 	}
 
 	public ListenableFuture<Void> startCapture(Surface... surfaces) {
+	    if (surfaces.length == 0) {
+	        throw new IllegalArgumentException("Must start capture for at least one surface");
+        }
 		if (startFuture != null) {
 			throw new IllegalStateException("CameraSessionManager already started");
 		}
 		startFuture = SettableFuture.create();
 		try {
 			final List<Surface> surfaceList = Arrays.asList(surfaces);
-			cameraGuard.getCameraDevice().createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
+            Log.d(TAG, "Starting camera capture for " + surfaceList.size() + " surfaces");
+			cameraGuard.getCameraDevice().createCaptureSession(surfaceList, new
+					CameraCaptureSession.StateCallback() {
 
 				@Override
 				public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
 					if (cameraGuard.isCameraOpen()) {
+					    Log.d(TAG, "Successfully configured capture session");
 						setSession(cameraCaptureSession, surfaceList);
 						startFuture.set(null);
 					} else {
@@ -80,6 +85,9 @@ public class CameraSessionManager {
 
 	public void startPreviewSession(Surface surface) {
 		checkSurface(surface);
+		if (!cameraGuard.isCameraOpen()) {
+		    throw new IllegalStateException("Camera is not open");
+        }
 
 		try {
 			CameraDevice cameraDevice = cameraGuard.getCameraDevice();
@@ -104,10 +112,13 @@ public class CameraSessionManager {
 	};
 
 	public void closeSession() {
-		captureSession.close();
-		captureSession = null;
+		if (startFuture != null && !startFuture.isDone()) {
+		    Log.d(TAG, "Closing camera session");
+            captureSession.close();
+            captureSession = null;
 
-		surfaceSet.clear();
-		startFuture = null;
+            surfaceSet.clear();
+            startFuture = null;
+        }
 	}
 }

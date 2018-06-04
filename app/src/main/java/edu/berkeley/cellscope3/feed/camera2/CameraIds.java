@@ -29,5 +29,6 @@ public final class CameraIds {
 		throw new NoSuchElementException("No back-facing camera was found");
 	}
 
-	private CameraIds() {}
+	private CameraIds() {
+	}
 }

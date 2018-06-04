@@ -17,8 +17,8 @@ public class CameraPermissionRequesterActivity extends Activity {
 	protected void onResume() {
 		super.onResume();
 		Log.d(TAG, "Checking camera permission...");
-		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager
-				.PERMISSION_GRANTED) {
+		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+				== PackageManager.PERMISSION_GRANTED) {
 			Log.d(TAG, "ImageFeed permissions already granted");
 			setResult(Activity.RESULT_OK);
 			finish();

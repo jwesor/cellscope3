@@ -1,13 +1,10 @@
 package edu.berkeley.cellscope3.feed.camera2;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
-import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -77,6 +74,7 @@ public class Camera2Fragment extends Fragment {
 	@Override
 	public void onResume() {
 		super.onResume();
+		Log.d(TAG, "onResume");
 		startBackgroundThread();
 
 		if (textureView.isAvailable()) {
@@ -88,20 +86,22 @@ public class Camera2Fragment extends Fragment {
 
 	@Override
 	public void onPause() {
+		Log.d(TAG, "onPause");
 		closeCamera();
 		stopBackgroundThread();
 		super.onPause();
 	}
 
-	private void openCamera()
-		{Log.d(TAG, "Checking camera permission...");
+	private void openCamera() {
+		Log.d(TAG, "Checking camera permission...");
 		if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) ==
 				PackageManager.PERMISSION_GRANTED) {
 			Log.d(TAG, "Camera permissions already granted");
 			setupAndStartCamera();
 		} else {
 			Log.d(TAG, "Requesting camera permission...");
-			ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.CAMERA},
+			ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission
+							.CAMERA},
 					REQUEST_CAMERA_PERMISSION);
 		}
 	}
@@ -140,9 +140,9 @@ public class Camera2Fragment extends Fragment {
 				openCameraFuture,
 				new AsyncFunction<CameraDevice, Void>() {
 					@Override
-					public ListenableFuture<Void> apply(CameraDevice input) throws
-							Exception {
-						return cameraSessionManager.startCapture(surface, imageReader.getSurface());
+					public ListenableFuture<Void> apply(CameraDevice input) {
+						return cameraSessionManager.startCapture(
+						        surface, imageReader.getSurface());
 					}
 				},
 				MoreExecutors.directExecutor());
@@ -152,7 +152,8 @@ public class Camera2Fragment extends Fragment {
 				new FutureCallback<Void>() {
 					@Override
 					public void onSuccess(Void result) {
-						Log.d(TAG, "Successfully started camera capture");
+						Log.d(TAG, "Successfully started camera capture. Starting  preview.");
+						cameraSessionManager.startPreviewSession(surface);
 					}
 
 					@Override
@@ -165,6 +166,7 @@ public class Camera2Fragment extends Fragment {
 	}
 
 	private void closeCamera() {
+		Log.d(TAG, "Closing camera");
 		if (cameraSessionManager != null) {
 			cameraSessionManager.closeSession();
 			cameraSessionManager = null;
@@ -201,7 +203,8 @@ public class Camera2Fragment extends Fragment {
 				cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 		int[] outputFormats = map.getOutputFormats();
 		Log.d(TAG, "Output formats: " + Arrays.toString(outputFormats));
-		// JPEG for the preview is good enough. Image processing and image capture should be on RAW.
+		// JPEG for the preview is good enough. Image processing and image capture should be on
+		// RAW.
 		Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
 		Log.d(TAG, "Sizes found: " + sizes);
 		previewSize = CameraSizes.largestWindowFit(sizes, getActivity());
@@ -240,24 +243,26 @@ public class Camera2Fragment extends Fragment {
 
 	private final TextureView.SurfaceTextureListener surfaceTextureListener =
 			new TextureView.SurfaceTextureListener() {
-		@Override
-		public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-			openCamera();
-		}
+				@Override
+				public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int
+						height) {
+					openCamera();
+				}
 
-		@Override
-		public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+				@Override
+				public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int
+						height) {
 
-		}
+				}
 
-		@Override
-		public boolean onSurfaceTextureDestroyed
-				(SurfaceTexture texture) {
-			return true;
-		}
+				@Override
+				public boolean onSurfaceTextureDestroyed
+						(SurfaceTexture texture) {
+					return true;
+				}
 
-		@Override
-		public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-		}
-	};
+				@Override
+				public void onSurfaceTextureUpdated(SurfaceTexture texture) {
+				}
+			};
 }
