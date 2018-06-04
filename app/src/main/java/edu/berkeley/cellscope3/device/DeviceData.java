@@ -7,21 +7,21 @@ import java.util.Arrays;
  */
 public final class DeviceData {
 
-	public final byte[] data;
+    public final byte[] data;
 
-	public static DeviceData of(byte[] data) {
-		return new DeviceData(data);
-	}
+    public static DeviceData of(byte[] data) {
+        return new DeviceData(data);
+    }
 
-	private DeviceData(byte[] data) {
-		this.data = data;
-	}
+    private DeviceData(byte[] data) {
+        this.data = data;
+    }
 
-	@Override
-	public boolean equals(Object object) {
-		if (object == null || !(object instanceof DeviceData)) {
-			return false;
-		}
-		return Arrays.equals(data, ((DeviceData) object).data);
-	}
+    @Override
+    public boolean equals(Object object) {
+        if (object == null || !(object instanceof DeviceData)) {
+            return false;
+        }
+        return Arrays.equals(data, ((DeviceData) object).data);
+    }
 }
