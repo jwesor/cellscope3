@@ -1,11 +1,11 @@
 package edu.berkeley.cellscope3.feed.camera2;
 
-import android.app.Activity;
-import android.app.Fragment;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 
-public class Camera2Activity extends Activity {
+public class Camera2Activity extends FragmentActivity {
 
 	private Fragment fragment;
 
@@ -14,11 +14,11 @@ public class Camera2Activity extends Activity {
 		super.onCreate(savedInstanceState);
 		if (savedInstanceState == null) {
 			fragment = new Camera2Fragment();
-			getFragmentManager().beginTransaction()
+			getSupportFragmentManager().beginTransaction()
 					.add(android.R.id.content, fragment, "CAMERA2")
 					.commit();
 		} else {
-			fragment = getFragmentManager().findFragmentByTag("CAMERA2");
+			fragment = getSupportFragmentManager().findFragmentByTag("CAMERA2");
 		}
 	}
 }

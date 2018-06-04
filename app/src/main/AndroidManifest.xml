@@ -26,7 +26,7 @@
 
         <activity android:name=".feed.camera2.Camera2Activity" android:screenOrientation="portrait"/>
 
-        <activity android:name=".feed.camera2.CameraPermissionRequesterActivity"
+        <activity android:name=".feed.camera2.CameraPermissionRequester"
                   android:theme="@android:style/Theme.NoDisplay" />
         <service
             android:name=".device.ble.BleService"

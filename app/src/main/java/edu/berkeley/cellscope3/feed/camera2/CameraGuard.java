@@ -87,7 +87,6 @@ public class CameraGuard {
 			cameraManager.openCamera(cameraId, stateCallback, handler);
 		} catch (CameraAccessException | SecurityException e) {
 			Log.e(TAG, "Exception while opening camera", e);
-			semaphore.release();
 			return Futures.immediateFailedFuture(e);
 		}
 		return openFuture;
