@@ -94,7 +94,7 @@ public final class CameraPermissionRequester {
                     .getSupportFragmentManager()
                     .beginTransaction()
                     .remove(this)
-                    .commitNowAllowingStateLoss();
+                    .commit();
         }
     }
 }

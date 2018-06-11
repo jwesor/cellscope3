@@ -186,6 +186,7 @@ public class Camera2Fragment extends Fragment {
             cameraCharacteristics = pair.second;
 
             cameraGuard = new CameraGuard(manager, cameraId, backgroundHandler);
+            cameraSessionManager = new CameraSessionManager(cameraGuard, backgroundHandler);
         } catch (CameraAccessException e) {
             Log.e(TAG, "Failed to set up camera", e);
         }
@@ -199,9 +200,9 @@ public class Camera2Fragment extends Fragment {
         // JPEG for the preview is good enough. Image processing and image capture should be on
         // RAW.
         Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
-        Log.d(TAG, "Sizes found: " + sizes);
+        Log.d(TAG, "Sizes found: " + Arrays.toString(sizes));
         previewSize = CameraSizes.largestWindowFit(sizes, getActivity());
-
+        Log.d(TAG, "Setting preview aspect ratio to " + previewSize);
         textureView.setAspectRatio(previewSize.getWidth(), previewSize.getHeight());
     }
 
