@@ -2,21 +2,18 @@ package edu.berkeley.cellscope3.feed.camera2;
 
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CaptureRequest;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.Surface;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Jon on 1/28/2018.
@@ -26,26 +23,27 @@ public class CameraSessionManager {
 	private static final String TAG = CameraSessionManager.class.getSimpleName();
 
 	private final Handler handler;
-	private final CameraGuard cameraGuard;
-	private final Set<Surface> surfaceSet;
+	private final Map<Integer, Surface> surfaces;
 	private CameraCaptureSession captureSession;
 	private SettableFuture<Void> startFuture;
 
-	public CameraSessionManager(
-			CameraGuard cameraGuard,
-			Handler handler) {
-		this.cameraGuard = cameraGuard;
+	public CameraSessionManager(Handler handler) {
 		this.handler = handler;
-		this.surfaceSet = new HashSet<>();
+		this.surfaces = new HashMap<>();
 	}
 
-	private void setSession(CameraCaptureSession captureSession, Collection<Surface> surfaces) {
+	private void setSession(
+			CameraCaptureSession captureSession, Map<Integer, Surface> surfaces) {
 		this.captureSession = captureSession;
-		this.surfaceSet.addAll(surfaces);
+		this.surfaces.putAll(surfaces);
 	}
 
-	public ListenableFuture<Void> startCapture(Surface... surfaces) {
-	    if (surfaces.length == 0) {
+	public ListenableFuture<Void> startSession(
+			final CameraGuard cameraGuard, final Map<Integer, Surface> surfaces) {
+		if (captureSession != null) {
+			throw new IllegalStateException("Another capture session already exists");
+		}
+	    if (surfaces.isEmpty()) {
 	        throw new IllegalArgumentException("Must start capture for at least one surface");
         }
 		if (startFuture != null) {
@@ -53,16 +51,16 @@ public class CameraSessionManager {
 		}
 		startFuture = SettableFuture.create();
 		try {
-			final List<Surface> surfaceList = Arrays.asList(surfaces);
-            Log.d(TAG, "Starting camera capture for " + surfaceList.size() + " surfaces");
-			cameraGuard.getCameraDevice().createCaptureSession(surfaceList, new
-					CameraCaptureSession.StateCallback() {
+            Log.d(TAG, "Starting camera capture for " + surfaces.size() + " surfaces");
+			cameraGuard.getCameraDevice().createCaptureSession(
+					ImmutableList.copyOf(surfaces.values()),
+					new CameraCaptureSession.StateCallback() {
 
 				@Override
 				public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
 					if (cameraGuard.isCameraOpen()) {
 					    Log.d(TAG, "Successfully configured capture session");
-						setSession(cameraCaptureSession, surfaceList);
+						setSession(cameraCaptureSession, surfaces);
 						startFuture.set(null);
 					} else {
 						startFuture.setException(new Exception("Camera is already closed"));
@@ -83,33 +81,27 @@ public class CameraSessionManager {
 		return startFuture;
 	}
 
-	public void startPreviewSession(Surface surface) {
-		checkSurface(surface);
-		if (!cameraGuard.isCameraOpen()) {
-		    throw new IllegalStateException("Camera is not open");
-        }
-
-		try {
-			CameraDevice cameraDevice = cameraGuard.getCameraDevice();
-			CaptureRequest.Builder previewRequestBuilder = cameraDevice.createCaptureRequest(
-					CameraDevice.TEMPLATE_PREVIEW);
-			previewRequestBuilder.addTarget(surface);
-			captureSession.setRepeatingRequest(
-					previewRequestBuilder.build(), captureCallback, handler);
-		} catch (CameraAccessException exception) {
-			Log.e(TAG, "Failed to start preview", exception);
+	public void stopCaptures() {
+		if (captureSession != null) {
+			try {
+				captureSession.stopRepeating();
+				captureSession.abortCaptures();
+			} catch (CameraAccessException e) {
+				Log.e(TAG, "Failed to stop camera session captures", e);
+			}
 		}
 	}
 
-	private void checkSurface(Surface surface) {
-		if (!surfaceSet.contains(surface)) {
-			throw new IllegalArgumentException("Surface is not part of this CameraCaptureSession");
-		}
+	public CameraCaptureSession getCaptureSession() {
+		return captureSession;
 	}
 
-	private final CameraCaptureSession.CaptureCallback captureCallback
-			= new CameraCaptureSession.CaptureCallback() {
-	};
+	public Surface getSurface(int id) {
+		if (captureSession == null) {
+			throw new IllegalStateException("No capture session in progress");
+		}
+		return surfaces.get(id);
+	}
 
 	public void closeSession() {
 		if (startFuture != null && !startFuture.isDone()) {
@@ -117,7 +109,7 @@ public class CameraSessionManager {
             captureSession.close();
             captureSession = null;
 
-            surfaceSet.clear();
+            surfaces.clear();
             startFuture = null;
         }
 	}

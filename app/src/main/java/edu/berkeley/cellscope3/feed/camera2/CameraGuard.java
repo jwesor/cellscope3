@@ -111,6 +111,12 @@ public class CameraGuard {
 		return cameraDevice != null;
 	}
 
+	public void checkCameraOpen() {
+		if (!isCameraOpen()) {
+			throw new IllegalStateException("Camera is not open");
+		}
+	}
+
 	public CameraDevice getCameraDevice() {
 		if (semaphore.tryAcquire()) {
 			semaphore.release();

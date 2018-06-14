@@ -21,6 +21,7 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AsyncCallable;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
@@ -29,17 +30,23 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.Arrays;
+import java.util.concurrent.Executor;
 
-import edu.berkeley.cellscope3.util.MainThreadExecutor;
+import edu.berkeley.cellscope3.util.HandlerExecutor;
 
 public class Camera2Fragment extends Fragment {
 
     private static final String TAG = Camera2Fragment.class.getSimpleName();
 
+    private static final int PREVIEW_SURFACE = 1;
+    private static final int READER_SURFACE = 2;
+
     private final ImageAvailableListener imageAvailableListener = new ImageAvailableListener();
 
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
+    private Executor backgroundExecutor;
+
     private AutoFitTextureView textureView;
     private ImageReader imageReader;
 
@@ -70,6 +77,20 @@ public class Camera2Fragment extends Fragment {
         Log.d(TAG, "onResume");
         startBackgroundThread();
         startCameraFuture = startCamera();
+        Futures.addCallback(
+                startCameraFuture,
+                new FutureCallback<Void>() {
+                    @Override
+                    public void onSuccess(Void result) {
+                        Log.d(TAG, "Camera started");
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        Log.e(TAG, "Failed to start camera", t);
+                    }
+                }
+        );
     }
 
     @Override
@@ -112,8 +133,21 @@ public class Camera2Fragment extends Fragment {
                                 }
                             }
                         },
-                        MainThreadExecutor.INSTANCE);
-        return startFuture;
+                        HandlerExecutor.MAIN_THREAD);
+
+        return Futures.transformAsync(
+                startFuture,
+                new AsyncFunction<Void, Void>() {
+                    @Override
+                    public ListenableFuture<Void> apply(Void result) throws Exception {
+                        return CameraCaptureRequester.startPreviewCapture(
+                                PREVIEW_SURFACE,
+                                cameraGuard,
+                                cameraSessionManager,
+                                backgroundHandler);
+                    }
+                },
+                backgroundExecutor);
     }
 
     private ListenableFuture<Void> openAndStartCapture() {
@@ -121,37 +155,25 @@ public class Camera2Fragment extends Fragment {
         assert texture != null;
         texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
 
-        final Surface surface = new Surface(texture);
+        final Surface previewSurface = new Surface(texture);
+
+        imageReader = ImageReader.newInstance(
+                outputSize.getWidth(), outputSize.getHeight(), ImageFormat.JPEG, 2);
+        imageReader.setOnImageAvailableListener(imageAvailableListener, backgroundHandler);
+
+        final ImmutableMap<Integer, Surface> surfaces = ImmutableMap.of(
+                PREVIEW_SURFACE, previewSurface, READER_SURFACE, imageReader.getSurface());
 
         ListenableFuture<CameraDevice> openCameraFuture = cameraGuard.openCamera();
-        ListenableFuture<Void> startCameraFuture = Futures.transformAsync(
+        return Futures.transformAsync(
                 openCameraFuture,
                 new AsyncFunction<CameraDevice, Void>() {
                     @Override
                     public ListenableFuture<Void> apply(CameraDevice input) {
-                        return cameraSessionManager.startCapture(
-                                surface, imageReader.getSurface());
+                        return cameraSessionManager.startSession(cameraGuard, surfaces);
                     }
                 },
-                MoreExecutors.directExecutor());
-
-        Futures.addCallback(
-                startCameraFuture,
-                new FutureCallback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                        Log.d(TAG, "Successfully started camera capture. Starting  preview.");
-                        cameraSessionManager.startPreviewSession(surface);
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-                        Log.e(TAG, "Failed to open and start camera capture", t);
-                    }
-                },
-                MoreExecutors.directExecutor()
-        );
-        return startCameraFuture;
+                backgroundExecutor);
     }
 
     private void closeCamera() {
@@ -186,7 +208,7 @@ public class Camera2Fragment extends Fragment {
             cameraCharacteristics = pair.second;
 
             cameraGuard = new CameraGuard(manager, cameraId, backgroundHandler);
-            cameraSessionManager = new CameraSessionManager(cameraGuard, backgroundHandler);
+            cameraSessionManager = new CameraSessionManager(backgroundHandler);
         } catch (CameraAccessException e) {
             Log.e(TAG, "Failed to set up camera", e);
         }
@@ -211,10 +233,6 @@ public class Camera2Fragment extends Fragment {
                 cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
         outputSize = CameraSizes.withGreatestArea(sizes);
-
-        imageReader = ImageReader.newInstance(
-                outputSize.getWidth(), outputSize.getHeight(), ImageFormat.JPEG, 2);
-        imageReader.setOnImageAvailableListener(imageAvailableListener, backgroundHandler);
     }
 
 
@@ -222,6 +240,7 @@ public class Camera2Fragment extends Fragment {
         backgroundThread = new HandlerThread("Camera2Fragment_Background");
         backgroundThread.start();
         backgroundHandler = new Handler(backgroundThread.getLooper());
+        backgroundExecutor = new HandlerExecutor(backgroundHandler);
     }
 
     private void stopBackgroundThread() {
@@ -230,6 +249,7 @@ public class Camera2Fragment extends Fragment {
             backgroundThread.join();
             backgroundThread = null;
             backgroundHandler = null;
+            backgroundExecutor = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
