@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Bundle;
@@ -27,7 +28,6 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.Arrays;
 import java.util.concurrent.Executor;
@@ -36,222 +36,252 @@ import edu.berkeley.cellscope3.util.HandlerExecutor;
 
 public class Camera2Fragment extends Fragment {
 
-    private static final String TAG = Camera2Fragment.class.getSimpleName();
+	private static final String TAG = Camera2Fragment.class.getSimpleName();
 
-    private static final int PREVIEW_SURFACE = 1;
-    private static final int READER_SURFACE = 2;
+	private static final int PREVIEW_SURFACE = 1;
+	private static final int READER_SURFACE = 2;
 
-    private final ImageAvailableListener imageAvailableListener = new ImageAvailableListener();
+	private final ImageAvailableListener imageAvailableListener = new ImageAvailableListener() {
+		@Override
+		public void onImageAvailable(ImageReader imageReader) {
+			Log.d(TAG, "Image available");
+		}
+	};
 
-    private HandlerThread backgroundThread;
-    private Handler backgroundHandler;
-    private Executor backgroundExecutor;
+	private HandlerThread backgroundThread;
+	private Handler backgroundHandler;
+	private Executor backgroundExecutor;
 
-    private AutoFitTextureView textureView;
-    private ImageReader imageReader;
+	private AutoFitTextureView textureView;
+	private ImageReader imageReader;
 
-    private String cameraId;
-    private CameraCharacteristics cameraCharacteristics;
-    private Size previewSize;
-    private Size outputSize;
+	private String cameraId;
+	private CameraCharacteristics cameraCharacteristics;
 
-    private CameraGuard cameraGuard;
-    private CameraSessionManager cameraSessionManager;
-    private ListenableFuture<Void> startCameraFuture;
+	private CameraGuard cameraGuard;
+	private CameraSessionManager cameraSessionManager;
+	private ListenableFuture<Void> startCameraFuture;
+	private ListenableFuture<CaptureResult> captureFuture;
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+	}
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle
-            savedInstanceState) {
-        textureView = new AutoFitTextureView(getActivity());
-        return textureView;
-    }
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle
+			savedInstanceState) {
+		textureView = new AutoFitTextureView(getActivity());
+		textureView.setOnClickListener(
+				new View.OnClickListener() {
+					@Override
+					public void onClick(View view) {
+						captureFuture = captureStill(captureFuture);
+					}
+				}
+		);
+		return textureView;
+	}
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume");
-        startBackgroundThread();
-        startCameraFuture = startCamera();
-        Futures.addCallback(
-                startCameraFuture,
-                new FutureCallback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                        Log.d(TAG, "Camera started");
-                    }
+	@Override
+	public void onResume() {
+		super.onResume();
+		Log.d(TAG, "onResume");
+		startBackgroundThread();
+		startCameraFuture = startCamera();
+		Futures.addCallback(
+				startCameraFuture,
+				new FutureCallback<Void>() {
+					@Override
+					public void onSuccess(Void result) {
+						Log.d(TAG, "Camera started");
+					}
 
-                    @Override
-                    public void onFailure(Throwable t) {
-                        Log.e(TAG, "Failed to start camera", t);
-                    }
-                }
-        );
-    }
+					@Override
+					public void onFailure(Throwable t) {
+						Log.e(TAG, "Failed to start camera", t);
+					}
+				}
+		);
 
-    @Override
-    public void onPause() {
-        Log.d(TAG, "onPause");
-        closeCamera();
-        stopBackgroundThread();
-        super.onPause();
-    }
+		captureFuture = startPreview(startCameraFuture);
+	}
 
-    private ListenableFuture<Void> startCamera() {
-        ListenableFuture<Void> textureFuture = TextureViewHelper.whenAvailable(textureView);
+	@Override
+	public void onPause() {
+		Log.d(TAG, "onPause");
+		closeCamera();
+		stopBackgroundThread();
+		super.onPause();
+	}
 
-        final ListenableFuture<Boolean> permissionCheckFuture =
-                CameraPermissionRequester.requestPermission(getActivity());
+	private ListenableFuture<Void> startCamera() {
+		ListenableFuture<Void> textureFuture = TextureViewHelper.whenAvailable(textureView);
 
-        ListenableFuture<Boolean> permissionAndTextureFuture =
-                Futures.whenAllSucceed(textureFuture, permissionCheckFuture)
-                        .callAsync(
-                            new AsyncCallable<Boolean>() {
-                                @Override
-                                public ListenableFuture<Boolean> call() {
-                                    return permissionCheckFuture;
-                                }
-                            });
+		final ListenableFuture<Boolean> permissionCheckFuture =
+				CameraPermissionRequester.requestPermission(getActivity());
 
-        ListenableFuture<Void> startFuture =
-                Futures.transformAsync(
-                        permissionAndTextureFuture,
-                        new AsyncFunction<Boolean, Void>() {
-                            @Override
-                            public ListenableFuture<Void> apply(Boolean result) throws Exception {
-                                if (result) {
-                                    setupCameraManager();
-                                    setupPreviewSize();
-                                    setupOutputSize();
-                                    return openAndStartCapture();
-                                } else {
-                                    throw new Exception("Permission not granted");
-                                }
-                            }
-                        },
-                        HandlerExecutor.MAIN_THREAD);
+		ListenableFuture<Boolean> permissionAndTextureFuture =
+				Futures.whenAllSucceed(textureFuture, permissionCheckFuture)
+						.callAsync(
+								new AsyncCallable<Boolean>() {
+									@Override
+									public ListenableFuture<Boolean> call() {
+										return permissionCheckFuture;
+									}
+								});
 
-        return Futures.transformAsync(
-                startFuture,
-                new AsyncFunction<Void, Void>() {
-                    @Override
-                    public ListenableFuture<Void> apply(Void result) throws Exception {
-                        return CameraCaptureRequester.startPreviewCapture(
-                                PREVIEW_SURFACE,
-                                cameraGuard,
-                                cameraSessionManager,
-                                backgroundHandler);
-                    }
-                },
-                backgroundExecutor);
-    }
+		return Futures.transformAsync(
+				permissionAndTextureFuture,
+				new AsyncFunction<Boolean, Void>() {
+					@Override
+					public ListenableFuture<Void> apply(Boolean result) throws Exception {
+						if (result) {
+							setupCameraManager();
+							return openAndStartCapture();
+						} else {
+							throw new Exception("Permission not granted");
+						}
+					}
+				},
+				HandlerExecutor.MAIN_THREAD);
+	}
 
-    private ListenableFuture<Void> openAndStartCapture() {
-        SurfaceTexture texture = textureView.getSurfaceTexture();
-        assert texture != null;
-        texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
+	private ListenableFuture<Void> openAndStartCapture() {
+		SurfaceTexture texture = textureView.getSurfaceTexture();
+		assert texture != null;
 
-        final Surface previewSurface = new Surface(texture);
+		Size previewSize = getPreviewSize();
+		textureView.setAspectRatio(previewSize.getWidth(), previewSize.getHeight());
+		texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
 
-        imageReader = ImageReader.newInstance(
-                outputSize.getWidth(), outputSize.getHeight(), ImageFormat.JPEG, 2);
-        imageReader.setOnImageAvailableListener(imageAvailableListener, backgroundHandler);
+		final Surface previewSurface = new Surface(texture);
 
-        final ImmutableMap<Integer, Surface> surfaces = ImmutableMap.of(
-                PREVIEW_SURFACE, previewSurface, READER_SURFACE, imageReader.getSurface());
+		Size outputSize = getOutputSize();
+		imageReader = ImageReader.newInstance(
+				outputSize.getWidth(), outputSize.getHeight(), ImageFormat.JPEG, 2);
+		imageReader.setOnImageAvailableListener(imageAvailableListener, backgroundHandler);
 
-        ListenableFuture<CameraDevice> openCameraFuture = cameraGuard.openCamera();
-        return Futures.transformAsync(
-                openCameraFuture,
-                new AsyncFunction<CameraDevice, Void>() {
-                    @Override
-                    public ListenableFuture<Void> apply(CameraDevice input) {
-                        return cameraSessionManager.startSession(cameraGuard, surfaces);
-                    }
-                },
-                backgroundExecutor);
-    }
+		final ImmutableMap<Integer, Surface> surfaces = ImmutableMap.of(
+				PREVIEW_SURFACE, previewSurface, READER_SURFACE, imageReader.getSurface());
 
-    private void closeCamera() {
-        Log.d(TAG, "Closing camera");
-        if (!startCameraFuture.isDone()) {
-            startCameraFuture.cancel(true);
-        }
-        startCameraFuture = null;
+		ListenableFuture<CameraDevice> openCameraFuture = cameraGuard.openCamera();
+		return Futures.transformAsync(
+				openCameraFuture,
+				new AsyncFunction<CameraDevice, Void>() {
+					@Override
+					public ListenableFuture<Void> apply(CameraDevice input) {
+						return cameraSessionManager.startSession(cameraGuard, surfaces);
+					}
+				},
+				backgroundExecutor);
+	}
 
-        if (cameraSessionManager != null) {
-            cameraSessionManager.closeSession();
-            cameraSessionManager = null;
-        }
+	private void closeCamera() {
+		Log.d(TAG, "Closing camera");
+		if (!startCameraFuture.isDone()) {
+			startCameraFuture.cancel(true);
+		}
+		startCameraFuture = null;
 
-        if (cameraGuard != null) {
-            cameraGuard.closeCamera();
-            cameraGuard = null;
-        }
+		if (captureFuture != null && !captureFuture.isDone()) {
+			captureFuture.cancel(true);
+		}
+		captureFuture = null;
 
-        if (imageReader != null) {
-            imageReader.close();
-            imageReader = null;
-        }
-    }
+		if (cameraSessionManager != null) {
+			cameraSessionManager.closeSession();
+			cameraSessionManager = null;
+		}
 
-    private void setupCameraManager() {
-        try {
-            CameraManager manager = (CameraManager) getActivity().getSystemService(Context
-                    .CAMERA_SERVICE);
-            Pair<String, CameraCharacteristics> pair = CameraIds.getBackFacingCamera(manager);
-            cameraId = pair.first;
-            cameraCharacteristics = pair.second;
+		if (cameraGuard != null) {
+			cameraGuard.closeCamera();
+			cameraGuard = null;
+		}
 
-            cameraGuard = new CameraGuard(manager, cameraId, backgroundHandler);
-            cameraSessionManager = new CameraSessionManager(backgroundHandler);
-        } catch (CameraAccessException e) {
-            Log.e(TAG, "Failed to set up camera", e);
-        }
-    }
+		if (imageReader != null) {
+			imageReader.close();
+			imageReader = null;
+		}
+	}
 
-    private void setupPreviewSize() {
-        StreamConfigurationMap map =
-                cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        int[] outputFormats = map.getOutputFormats();
-        Log.d(TAG, "Output formats: " + Arrays.toString(outputFormats));
-        // JPEG for the preview is good enough. Image processing and image capture should be on
-        // RAW.
-        Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
-        Log.d(TAG, "Sizes found: " + Arrays.toString(sizes));
-        previewSize = CameraSizes.largestWindowFit(sizes, getActivity());
-        Log.d(TAG, "Setting preview aspect ratio to " + previewSize);
-        textureView.setAspectRatio(previewSize.getWidth(), previewSize.getHeight());
-    }
+	private void setupCameraManager() {
+		try {
+			CameraManager manager = (CameraManager) getActivity().getSystemService(
+					Context.CAMERA_SERVICE);
+			Pair<String, CameraCharacteristics> pair = CameraIds.getBackFacingCamera(manager);
+			cameraId = pair.first;
+			cameraCharacteristics = pair.second;
 
-    private void setupOutputSize() {
-        StreamConfigurationMap map =
-                cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
-        outputSize = CameraSizes.withGreatestArea(sizes);
-    }
+			cameraGuard = new CameraGuard(manager, cameraId, backgroundHandler);
+			cameraSessionManager = new CameraSessionManager(backgroundHandler);
+		} catch (CameraAccessException e) {
+			Log.e(TAG, "Failed to set up camera", e);
+		}
+	}
+
+	private Size getPreviewSize() {
+		StreamConfigurationMap map =
+				cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+		int[] outputFormats = map.getOutputFormats();
+		Log.d(TAG, "Output formats: " + Arrays.toString(outputFormats));
+		Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
+		Log.d(TAG, "Sizes found: " + Arrays.toString(sizes));
+		return CameraSizes.largestWindowFit(sizes, getActivity());
+	}
+
+	private Size getOutputSize() {
+		StreamConfigurationMap map =
+				cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+		Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
+		return CameraSizes.withGreatestArea(sizes);
+	}
 
 
-    private void startBackgroundThread() {
-        backgroundThread = new HandlerThread("Camera2Fragment_Background");
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
-        backgroundExecutor = new HandlerExecutor(backgroundHandler);
-    }
+	private void startBackgroundThread() {
+		backgroundThread = new HandlerThread("Camera2Fragment_Background");
+		backgroundThread.start();
+		backgroundHandler = new Handler(backgroundThread.getLooper());
+		backgroundExecutor = new HandlerExecutor(backgroundHandler);
+	}
 
-    private void stopBackgroundThread() {
-        backgroundThread.quitSafely();
-        try {
-            backgroundThread.join();
-            backgroundThread = null;
-            backgroundHandler = null;
-            backgroundExecutor = null;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
+	private void stopBackgroundThread() {
+		backgroundThread.quitSafely();
+		try {
+			backgroundThread.join();
+			backgroundThread = null;
+			backgroundHandler = null;
+			backgroundExecutor = null;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private ListenableFuture<CaptureResult> startPreview(ListenableFuture<?> future) {
+		return Futures.transformAsync(
+				future,
+				new AsyncFunction<Object, CaptureResult>() {
+					@Override
+					public ListenableFuture<CaptureResult> apply(Object result) throws Exception {
+						return CameraCaptureRequests.requestPreview(
+								PREVIEW_SURFACE,
+								cameraGuard,
+								cameraSessionManager);
+					}
+				},
+				backgroundExecutor);
+	}
+
+	private ListenableFuture<CaptureResult> captureStill(ListenableFuture<CaptureResult> future) {
+		if (!future.isDone()) {
+			Log.d(TAG, "Another capture is currently in progress.");
+			return future;
+		}
+		Log.d(TAG, "Requesting still capture");
+		cameraSessionManager.stopCaptures();
+		ListenableFuture<CaptureResult> captureStillFuture =
+				CameraCaptureRequests.requestStill(
+						READER_SURFACE, cameraGuard, cameraSessionManager);
+		return startPreview(captureStillFuture);
+	}
 }
