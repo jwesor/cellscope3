@@ -16,13 +16,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.berkeley.cellscope3.device.DeviceConnection;
+import edu.berkeley.cellscope3.service.ServiceBinding;
 
 /**
  * Implementation of {@link DeviceConnection} that uses {@link BleService}. This has the same
  * behavior as a {@link BleDeviceConnection}, but by going through a bound service, ensures
  * that the connection is maintained in the background across different Activities.
  */
-public final class BleServiceDeviceConnection implements DeviceConnection {
+public final class BleServiceDeviceConnection extends ServiceBinding<BleService> implements DeviceConnection {
 
 	private final Context context;
 	private final List<DeviceListener> listeners;
@@ -31,15 +32,13 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 	@Nullable
 	private BleProfile profile;
 
-	private BleService service;
-	private SettableFuture<Boolean> bindFuture;
-
 	public BleServiceDeviceConnection(Context context) {
 		this(context, null, null);
 	}
 
 	public BleServiceDeviceConnection(
 			Context context, @Nullable String address, @Nullable BleProfile profile) {
+		super(context);
 		this.context = context;
 		this.listeners = new ArrayList<>();
 		setConnection(address, profile);
@@ -50,52 +49,42 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 		this.profile = profile;
 	}
 
-	public ListenableFuture<Boolean> bindService() {
-		if (service != null) {
-			return Futures.immediateFuture(true);
-		}
-		Intent intent = new Intent(context, BleService.class);
-		if (!context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)) {
-			return Futures.immediateFuture(false);
-		}
+	@Override
+	protected BleService getConnectedService(IBinder iBinder) {
+		return ((BleService.BleServiceBinder) iBinder).getService();
+	}
+
+	@Override
+	protected void onBindService() {
 		context.registerReceiver(broadcastReceiver, BleService.INTENT_FILTER);
-		bindFuture = SettableFuture.create();
-		return bindFuture;
 	}
 
-	public void unbindService() {
-		if (service != null) {
-			context.unbindService(serviceConnection);
-			context.unregisterReceiver(broadcastReceiver);
-			service = null;
-		}
-	}
-
-	public boolean isServiceBound() {
-		return service != null;
+	@Override
+	protected void onUnbindService() {
+		context.unregisterReceiver(broadcastReceiver);
 	}
 
 	@Override
 	public ListenableFuture<Boolean> connect() {
-		if (service != null && address != null && profile != null) {
-			return service.connect(address, profile);
+		if (isServiceBound() && address != null && profile != null) {
+			return getService().connect(address, profile);
 		}
 		return Futures.immediateFuture(false);
 	}
 
 	@Override
 	public boolean disconnect() {
-		return service != null && service.disconnect();
+		return isServiceBound() && getService().disconnect();
 	}
 
 	@Override
 	public ConnectionStatus getStatus() {
-		return service != null ? service.getStatus() : ConnectionStatus.DISCONNECTED;
+		return isServiceBound() ? getService().getStatus() : ConnectionStatus.DISCONNECTED;
 	}
 
 	@Override
 	public boolean sendRequest(byte[] data) {
-		return service != null && service.sendRequest(data);
+		return isServiceBound() && getService().sendRequest(data);
 	}
 
 	@Override
@@ -109,7 +98,7 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 		}
 	}
 
-	private void notifyOnDiconnect() {
+	private void notifyOnDisconnect() {
 		for (DeviceListener listener : listeners) {
 			listener.onDeviceDisconnect();
 		}
@@ -121,20 +110,6 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 		}
 	}
 
-	private final ServiceConnection serviceConnection = new ServiceConnection() {
-		@Override
-		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-			BleService.BleServiceBinder serviceBinder = (BleService.BleServiceBinder) iBinder;
-			service = serviceBinder.getService();
-			bindFuture.set(true);
-		}
-
-		@Override
-		public void onServiceDisconnected(ComponentName componentName) {
-			service = null;
-		}
-	};
-
 	private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -144,7 +119,7 @@ public final class BleServiceDeviceConnection implements DeviceConnection {
 					notifyOnConnect();
 					break;
 				case BleService.ACTION_DEVICE_DISCONNECTED:
-					notifyOnDiconnect();
+					notifyOnDisconnect();
 					break;
 				case BleService.ACTION_DEVICE_RESPONSE:
 					notifyOnResponse(intent.getByteArrayExtra(BleService.EXTRA_RESPONSE_DATA));

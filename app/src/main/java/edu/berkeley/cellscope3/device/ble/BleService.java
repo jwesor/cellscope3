@@ -76,21 +76,20 @@ public final class BleService extends Service {
 		disconnect();
 	}
 
-	@Nullable
 	@Override
 	public IBinder onBind(Intent intent) {
 		return binder;
 	}
 
-	public class BleServiceBinder extends Binder {
+	class BleServiceBinder extends Binder {
 
 		BleService getService() {
 			return BleService.this;
 		}
 	}
 
-	private DeviceConnection.DeviceListener deviceListener = new DeviceConnection.DeviceListener
-			() {
+	private DeviceConnection.DeviceListener deviceListener =
+			new DeviceConnection.DeviceListener() {
 		@Override
 		public void onDeviceConnect() {
 			sendBroadcast(new Intent(ACTION_DEVICE_CONNECTED));
