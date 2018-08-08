@@ -5,13 +5,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 final class ImmediateTestAction implements Action<Object> {
 
-	boolean executed;
-	Object result;
+    boolean executed;
+    Object result;
 
-	@Override
-	public ListenableFuture<Object> execute() {
-		executed = true;
-		result = new Object();
-		return Futures.immediateFuture(result);
-	}
+    @Override
+    public ListenableFuture<Object> execute() {
+        executed = true;
+        result = new Object();
+        return Futures.immediateFuture(result);
+    }
 }

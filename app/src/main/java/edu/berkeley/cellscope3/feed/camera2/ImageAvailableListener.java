@@ -8,8 +8,8 @@ import android.media.ImageReader;
 
 public class ImageAvailableListener implements ImageReader.OnImageAvailableListener {
 
-	@Override
-	public void onImageAvailable(ImageReader imageReader) {
+    @Override
+    public void onImageAvailable(ImageReader imageReader) {
 
-	}
+    }
 }

@@ -10,60 +10,60 @@ import android.util.Log;
  */
 public final class BleScanner {
 
-	private static final String TAG = BleScanner.class.getSimpleName();
+    private static final String TAG = BleScanner.class.getSimpleName();
 
-	private final BluetoothAdapter bluetoothAdapter;
-	private final Handler handler;
-	private BluetoothAdapter.LeScanCallback leScanCallback;
-	private BleScannerCallback scannerCallback;
-	private boolean scanning;
+    private final BluetoothAdapter bluetoothAdapter;
+    private final Handler handler;
+    private BluetoothAdapter.LeScanCallback leScanCallback;
+    private BleScannerCallback scannerCallback;
+    private boolean scanning;
 
-	public BleScanner(BluetoothAdapter bluetoothAdapter) {
-		this.bluetoothAdapter = bluetoothAdapter;
-		this.handler = new Handler();
-	}
+    public BleScanner(BluetoothAdapter bluetoothAdapter) {
+        this.bluetoothAdapter = bluetoothAdapter;
+        this.handler = new Handler();
+    }
 
-	public void scan(final BleScannerCallback callback, long scanMillis) {
-		Log.d(TAG, "Scanning started");
-		leScanCallback = new BluetoothAdapter.LeScanCallback() {
-			@Override
-			public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
-				Log.d(TAG, bluetoothDevice.getAddress() + " " + bluetoothDevice.getName());
-				callback.onDeviceFound(bluetoothDevice);
-			}
-		};
-		scannerCallback = callback;
+    public void scan(final BleScannerCallback callback, long scanMillis) {
+        Log.d(TAG, "Scanning started");
+        leScanCallback = new BluetoothAdapter.LeScanCallback() {
+            @Override
+            public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
+                Log.d(TAG, bluetoothDevice.getAddress() + " " + bluetoothDevice.getName());
+                callback.onDeviceFound(bluetoothDevice);
+            }
+        };
+        scannerCallback = callback;
 
-		scanning = bluetoothAdapter.startLeScan(leScanCallback);
-		if (scanMillis > 0) {
-			handler.postDelayed(new Runnable() {
-				@Override
-				public void run() {
-					stopScan();
-				}
-			}, scanMillis);
-		}
-	}
+        scanning = bluetoothAdapter.startLeScan(leScanCallback);
+        if (scanMillis > 0) {
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    stopScan();
+                }
+            }, scanMillis);
+        }
+    }
 
-	public boolean isScanning() {
-		return scanning;
-	}
+    public boolean isScanning() {
+        return scanning;
+    }
 
-	public void stopScan() {
-		if (scanning) {
-			Log.d(TAG, "Scanning stopped");
-			scanning = false;
-			bluetoothAdapter.stopLeScan(leScanCallback);
-			scannerCallback.onScanStopped();
-			leScanCallback = null;
-			scannerCallback = null;
-		}
-	}
+    public void stopScan() {
+        if (scanning) {
+            Log.d(TAG, "Scanning stopped");
+            scanning = false;
+            bluetoothAdapter.stopLeScan(leScanCallback);
+            scannerCallback.onScanStopped();
+            leScanCallback = null;
+            scannerCallback = null;
+        }
+    }
 
-	public interface BleScannerCallback {
+    public interface BleScannerCallback {
 
-		void onDeviceFound(BluetoothDevice device);
+        void onDeviceFound(BluetoothDevice device);
 
-		void onScanStopped();
-	}
+        void onScanStopped();
+    }
 }

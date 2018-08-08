@@ -36,7 +36,8 @@ public final class CameraPermissionRequester {
     }
 
     /**
-     * Empty fragment responsible for requesting camera permissions. Call {@link #requestPermission} instead of using this fragment directly.
+     * Empty fragment responsible for requesting camera permissions. Call {@link #requestPermission} instead of using
+     * this fragment directly.
      */
     public static final class PermissionRequestFragment extends Fragment {
 

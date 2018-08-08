@@ -11,56 +11,56 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(JUnit4.class)
 public final class ActionQueueTest {
 
-	private ActionQueue actionQueue;
+    private ActionQueue actionQueue;
 
-	@Before
-	public void setup() {
-		actionQueue = new ActionQueue();
-	}
+    @Before
+    public void setup() {
+        actionQueue = new ActionQueue();
+    }
 
-	@Test
-	public void testSingleAction() throws Exception {
-		ImmediateTestAction action = new ImmediateTestAction();
-		actionQueue.addAction(action);
-		actionQueue.start();
-		Thread.sleep(100);
-		assertTrue(action.executed);
-	}
+    @Test
+    public void testSingleAction() throws Exception {
+        ImmediateTestAction action = new ImmediateTestAction();
+        actionQueue.addAction(action);
+        actionQueue.start();
+        Thread.sleep(100);
+        assertTrue(action.executed);
+    }
 
-	@Test
-	public void testMultipleActions() throws Exception {
-		actionQueue.start();
-		SettableTestAction action1 = new SettableTestAction();
-		actionQueue.addAction(action1);
-		ImmediateTestAction action2 = new ImmediateTestAction();
-		actionQueue.addAction(action2);
+    @Test
+    public void testMultipleActions() throws Exception {
+        actionQueue.start();
+        SettableTestAction action1 = new SettableTestAction();
+        actionQueue.addAction(action1);
+        ImmediateTestAction action2 = new ImmediateTestAction();
+        actionQueue.addAction(action2);
 
-		Thread.sleep(100);
-		assertTrue(action1.executed);
-		assertFalse(action2.executed);
+        Thread.sleep(100);
+        assertTrue(action1.executed);
+        assertFalse(action2.executed);
 
-		action1.finish();
-		Thread.sleep(100);
-		assertTrue(action2.executed);
-	}
+        action1.finish();
+        Thread.sleep(100);
+        assertTrue(action2.executed);
+    }
 
-	@Test
-	public void testStop() throws Exception {
-		actionQueue.start();
-		SettableTestAction action1 = new SettableTestAction();
-		actionQueue.addAction(action1);
-		ImmediateTestAction action2 = new ImmediateTestAction();
-		actionQueue.addAction(action2);
+    @Test
+    public void testStop() throws Exception {
+        actionQueue.start();
+        SettableTestAction action1 = new SettableTestAction();
+        actionQueue.addAction(action1);
+        ImmediateTestAction action2 = new ImmediateTestAction();
+        actionQueue.addAction(action2);
 
-		Thread.sleep(100);
-		assertTrue(action1.executed);
-		assertFalse(action2.executed);
+        Thread.sleep(100);
+        assertTrue(action1.executed);
+        assertFalse(action2.executed);
 
-		actionQueue.stop();
+        actionQueue.stop();
 
-		action1.finish();
-		Thread.sleep(100);
-		assertFalse(action2.executed);
-	}
+        action1.finish();
+        Thread.sleep(100);
+        assertFalse(action2.executed);
+    }
 
 }

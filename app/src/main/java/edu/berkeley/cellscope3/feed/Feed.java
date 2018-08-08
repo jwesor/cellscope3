@@ -4,9 +4,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 public interface Feed<T> {
 
-	ListenableFuture<Void> open();
+    ListenableFuture<Void> open();
 
-	boolean isOpen();
+    boolean isOpen();
 
-	ListenableFuture<T> next();
+    ListenableFuture<T> next();
 }

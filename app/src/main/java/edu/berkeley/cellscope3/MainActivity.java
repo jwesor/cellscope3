@@ -3,6 +3,7 @@ package edu.berkeley.cellscope3;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
+
 import edu.berkeley.cellscope3.action.ActionQueue;
 import edu.berkeley.cellscope3.device.DeviceData;
 import edu.berkeley.cellscope3.device.DeviceRequestQueue;

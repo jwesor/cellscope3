@@ -5,24 +5,24 @@ import com.google.common.util.concurrent.SettableFuture;
 
 final class SettableTestAction implements Action<Object> {
 
-	private SettableFuture<Object> future = SettableFuture.create();
-	boolean executed;
-	Object result;
+    private SettableFuture<Object> future = SettableFuture.create();
+    boolean executed;
+    Object result;
 
-	@Override
-	public ListenableFuture<Object> execute() {
-		executed = true;
-		return future;
-	}
+    @Override
+    public ListenableFuture<Object> execute() {
+        executed = true;
+        return future;
+    }
 
-	void finish() {
-		result = new Object();
-		future.set(result);
-	}
+    void finish() {
+        result = new Object();
+        future.set(result);
+    }
 
-	public void reset() {
-		future = SettableFuture.create();
-		executed = false;
-		result = null;
-	}
+    public void reset() {
+        future = SettableFuture.create();
+        executed = false;
+        result = null;
+    }
 }

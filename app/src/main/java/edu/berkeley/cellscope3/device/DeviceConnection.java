@@ -7,40 +7,40 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 public interface DeviceConnection {
 
-	ListenableFuture<Boolean> connect();
+    ListenableFuture<Boolean> connect();
 
-	boolean disconnect();
+    boolean disconnect();
 
-	boolean sendRequest(byte[] data);
+    boolean sendRequest(byte[] data);
 
-	ConnectionStatus getStatus();
+    ConnectionStatus getStatus();
 
-	void addListener(DeviceListener listener);
+    void addListener(DeviceListener listener);
 
-	enum ConnectionStatus {
-		DISCONNECTED, CONNECTING, CONNECTED
-	}
+    enum ConnectionStatus {
+        DISCONNECTED, CONNECTING, CONNECTED
+    }
 
-	interface DeviceListener {
+    interface DeviceListener {
 
-		void onDeviceConnect();
+        void onDeviceConnect();
 
-		void onDeviceDisconnect();
+        void onDeviceDisconnect();
 
-		void onDeviceResponse(byte[] data);
-	}
+        void onDeviceResponse(byte[] data);
+    }
 
-	abstract class AbstractDeviceListener implements DeviceListener {
-		@Override
-		public void onDeviceConnect() {
-		}
+    abstract class AbstractDeviceListener implements DeviceListener {
+        @Override
+        public void onDeviceConnect() {
+        }
 
-		@Override
-		public void onDeviceDisconnect() {
-		}
+        @Override
+        public void onDeviceDisconnect() {
+        }
 
-		@Override
-		public void onDeviceResponse(byte[] data) {
-		}
-	}
+        @Override
+        public void onDeviceResponse(byte[] data) {
+        }
+    }
 }

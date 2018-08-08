@@ -17,49 +17,49 @@ import java.util.UUID;
  */
 final class CameraCaptureRequests {
 
-	private static final String TAG = CameraCaptureRequests.class.getSimpleName();
+    private static final String TAG = CameraCaptureRequests.class.getSimpleName();
 
-	static ListenableFuture<CaptureResult> requestPreview(
-			int surfaceId,
-			CameraGuard cameraGuard,
-			CameraSessionManager cameraSessionManager) {
-		cameraGuard.checkCameraOpen();
+    static ListenableFuture<CaptureResult> requestPreview(
+            int surfaceId,
+            CameraGuard cameraGuard,
+            CameraSessionManager cameraSessionManager) {
+        cameraGuard.checkCameraOpen();
 
-		Surface surface = cameraSessionManager.getSurface(surfaceId);
-		CameraDevice cameraDevice = cameraGuard.getCameraDevice();
+        Surface surface = cameraSessionManager.getSurface(surfaceId);
+        CameraDevice cameraDevice = cameraGuard.getCameraDevice();
 
-		try {
-			CaptureRequest.Builder requestBuilder =
-					cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-			requestBuilder.addTarget(surface);
-			requestBuilder.setTag(createTag());
-			return cameraSessionManager.setRepeatingRequest(requestBuilder.build());
-		} catch (CameraAccessException e) {
-			Log.e(TAG, "Failed to request preview", e);
-			return Futures.immediateFailedFuture(e);
-		}
-	}
+        try {
+            CaptureRequest.Builder requestBuilder =
+                    cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            requestBuilder.addTarget(surface);
+            requestBuilder.setTag(createTag());
+            return cameraSessionManager.setRepeatingRequest(requestBuilder.build());
+        } catch (CameraAccessException e) {
+            Log.e(TAG, "Failed to request preview", e);
+            return Futures.immediateFailedFuture(e);
+        }
+    }
 
-	static ListenableFuture<CaptureResult> requestStill(
-			int surfaceId, CameraGuard cameraGuard, CameraSessionManager cameraSessionManager) {
-		cameraGuard.checkCameraOpen();
+    static ListenableFuture<CaptureResult> requestStill(
+            int surfaceId, CameraGuard cameraGuard, CameraSessionManager cameraSessionManager) {
+        cameraGuard.checkCameraOpen();
 
-		Surface surface = cameraSessionManager.getSurface(surfaceId);
-		CameraDevice cameraDevice = cameraGuard.getCameraDevice();
+        Surface surface = cameraSessionManager.getSurface(surfaceId);
+        CameraDevice cameraDevice = cameraGuard.getCameraDevice();
 
-		try {
-			CaptureRequest.Builder requestBuilder =
-					cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-			requestBuilder.addTarget(surface);
-			requestBuilder.setTag(createTag());
-			return cameraSessionManager.captureRequest(requestBuilder.build());
-		} catch (CameraAccessException e) {
-			Log.e(TAG, "Failed to request still", e);
-			return Futures.immediateFailedFuture(e);
-		}
-	}
+        try {
+            CaptureRequest.Builder requestBuilder =
+                    cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            requestBuilder.addTarget(surface);
+            requestBuilder.setTag(createTag());
+            return cameraSessionManager.captureRequest(requestBuilder.build());
+        } catch (CameraAccessException e) {
+            Log.e(TAG, "Failed to request still", e);
+            return Futures.immediateFailedFuture(e);
+        }
+    }
 
-	private static Object createTag() {
-		return UUID.randomUUID();
-	}
+    private static Object createTag() {
+        return UUID.randomUUID();
+    }
 }

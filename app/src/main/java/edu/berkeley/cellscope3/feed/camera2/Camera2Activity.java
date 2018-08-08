@@ -7,18 +7,18 @@ import android.support.v4.app.FragmentActivity;
 
 public class Camera2Activity extends FragmentActivity {
 
-	private Fragment fragment;
+    private Fragment fragment;
 
-	@Override
-	protected void onCreate(@Nullable Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		if (savedInstanceState == null) {
-			fragment = new Camera2Fragment();
-			getSupportFragmentManager().beginTransaction()
-					.add(android.R.id.content, fragment, "CAMERA2")
-					.commit();
-		} else {
-			fragment = getSupportFragmentManager().findFragmentByTag("CAMERA2");
-		}
-	}
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState == null) {
+            fragment = new Camera2Fragment();
+            getSupportFragmentManager().beginTransaction()
+                    .add(android.R.id.content, fragment, "CAMERA2")
+                    .commit();
+        } else {
+            fragment = getSupportFragmentManager().findFragmentByTag("CAMERA2");
+        }
+    }
 }

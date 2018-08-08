@@ -12,17 +12,23 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.*;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import edu.berkeley.cellscope3.device.DeviceConnection;
 import edu.berkeley.cellscope3.device.ble.BleProfile;
 import edu.berkeley.cellscope3.device.ble.BleScanner;
 import edu.berkeley.cellscope3.device.ble.BleServiceDeviceConnection;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class BleScannerDialogFragment extends DialogFragment {
 
